@@ -281,8 +281,6 @@
             
             unsubscribeFromGame = onSnapshot(gameRef, (doc) => {
                 if (!doc.exists()) {
-                    // ✅ FIX: Don't call returnToLobby() here, as it can kill
-                    // the listener for a *new* game. Just log it.
                     console.warn("Game document not found or was deleted!");
                     return;
                 }
@@ -321,22 +319,25 @@
                     }
                 } else if (gameData.status === 'active') {
                     // --- STEP 3: Game has started! Switch screens. ---
-                    console.log("Game is active! Switching to game screen...");
+                    // This will be called for all players *except* the host
+                    // (who is handled by the new fix below)
+                    if (lobbyScreen.classList.contains('hidden')) return; // Already in game
+                    
+                    console.log("Game is active! (Heard by listener) Switching to game screen...");
                     lobbyScreen.classList.add('hidden');
                     gameScreen.classList.remove('hidden');
-                    // In the next step, we will render the game here
                 }
             });
         }
         
-        // --- STEP 3: Start Game Function (REAL) ---
+        // --- STEP 3: Start Game Function (BUG FIXED) ---
         async function startGame() {
             startGameBtn.disabled = true;
             startGameBtn.textContent = "Starting...";
 
             if (!currentGameId) {
-                // This shouldn't happen, but a good safety check
                 lobbyInfo.textContent = "Error: No game ID found.";
+                startGameBtn.disabled = false; // Re-enable
                 return;
             }
 
@@ -404,8 +405,11 @@
                     });
                 });
 
-                console.log("Start game transaction successful!");
-                // The onSnapshot listener will now see "status: active" and switch the screen
+                // ✅ NEW FIX: Transaction Succeeded! Manually switch the screen.
+                // We don't wait for onSnapshot, we *know* it's active.
+                console.log("Start game transaction successful! Manually switching screen for host.");
+                lobbyScreen.classList.add('hidden');
+                gameScreen.classList.remove('hidden');
             
             } catch (error) {
                 console.error("Error starting game:", error);
