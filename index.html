@@ -265,21 +265,25 @@
             }
         }
         
-        // --- STEP 2: Subscribe to Game Function ---
+        // --- STEP 2: Subscribe to Game Function (BUG FIXED) ---
         async function subscribeToGame(gameId) {
             currentGameId = gameId;
             const gameRef = doc(getGameCollectionRef(), gameId);
             
+            // Unsubscribe from any *previous* game listener
             if (unsubscribeFromGame) {
+                console.log("Unsubscribing from old game listener...");
                 unsubscribeFromGame();
+                unsubscribeFromGame = null;
             }
 
             console.log(`Subscribing to game: ${gameId}`);
             
             unsubscribeFromGame = onSnapshot(gameRef, (doc) => {
                 if (!doc.exists()) {
-                    console.warn("Game document not found!");
-                    returnToLobby(); // Go back to lobby if game is deleted
+                    // ✅ FIX: Don't call returnToLobby() here, as it can kill
+                    // the listener for a *new* game. Just log it.
+                    console.warn("Game document not found or was deleted!");
                     return;
                 }
                 
@@ -331,9 +335,8 @@
             startGameBtn.textContent = "Starting...";
 
             if (!currentGameId) {
-                showMessage("Game not found.", 2000);
-                startGameBtn.disabled = false;
-                startGameBtn.textContent = "Start Game";
+                // This shouldn't happen, but a good safety check
+                lobbyInfo.textContent = "Error: No game ID found.";
                 return;
             }
 
@@ -376,8 +379,11 @@
                     });
 
                     let firstCard = newDeck.pop();
-                    // First card can't be a Wild card
-                    while (WILD_VALUES.includes(firstCard.value)) {
+                    // First card can't be a Wild card OR a special action card
+                    while (
+                        WILD_VALUES.includes(firstCard.value) ||
+                        ['Skip', 'Reverse', 'Draw Two'].includes(firstCard.value)
+                    ) {
                         newDeck.unshift(firstCard); // Put it back in
                         firstCard = newDeck.pop(); // Get a new one
                     }
