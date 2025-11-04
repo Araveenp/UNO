@@ -70,7 +70,7 @@
             <!-- Player List --><div id="lobby-players-container" class="hidden mt-6 w-full">
                 <h3 class="text-xl font-semibold mb-2">Players in Lobby:</h3>
                 <ul id="lobby-player-list" class="list-none bg-black bg-opacity-20 rounded-lg p-4 text-left min-h-[50px]">
-                    <!-- Player list will be populated by subscribeToGame -->
+                    <!-- Player list will be populated by renderUI -->
                 </ul>
             </div>
 
@@ -96,7 +96,7 @@
 
 
     <script type="module">
-        // --- STEP 3: Firebase Imports ---
+        // --- Firebase Imports ---
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { 
             getAuth, 
@@ -126,7 +126,7 @@
         const lobbyPlayersContainer = document.getElementById('lobby-players-container');
         const lobbyPlayerList = document.getElementById('lobby-player-list');
 
-        // --- STEP 1: Firebase Config ---
+        // --- Firebase Config ---
         const firebaseConfig = {
           apiKey: "AIzaSyDIPxkUrfyMSzdddaBHHQ7hrhTMbTlOvao",
           authDomain: "uno-game-3e82a.firebaseapp.com",
@@ -137,19 +137,18 @@
           measurementId: "G-MBZTN7G8MC"
         };
         
+        // --- Global State ---
         let app, auth, db;
         let currentUserId = null;
-        
-        // --- STEP 2: Game State Variables ---
         let currentGameId = null;
         let unsubscribeFromGame = null; // This will hold the listener function
 
-        // --- STEP 3: Card Constants ---
+        // --- Card Constants ---
         const COLORS = ['Red', 'Yellow', 'Green', 'Blue'];
         const VALUES = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'Skip', 'Reverse', 'Draw Two'];
         const WILD_VALUES = ['Wild', 'Wild Draw Four'];
 
-        // --- STEP 1: Firebase Initialization ---
+        // --- Main Initialization ---
         async function init() {
             try {
                 app = initializeApp(firebaseConfig);
@@ -167,21 +166,127 @@
                     }
                 });
 
+                // Attach button listeners ONCE
+                createGameBtn.onclick = createGame;
+                joinGameBtn.onclick = joinGame;
+                startGameBtn.onclick = startGame;
+                leaveGameBtn.onclick = returnToLobby;
+                
+                // Start in the lobby state
+                renderUI(null);
+
             } catch (error) {
                 console.error("Firebase Init Error:", error);
                 lobbyInfo.textContent = "Error connecting to server.";
             }
         }
 
-        // --- STEP 2: Database Helper Function ---
+        // --- Database Helper ---
         function getGameCollectionRef() {
             return collection(db, "unoGames");
         }
+        
+        /**
+         * ✅ NEW: The One Master UI Function
+         * This is the ONLY function that shows/hides elements.
+         */
+        function renderUI(gameData) {
+            // Case 1: No game / In lobby
+            if (!gameData) {
+                console.log("Rendering UI: Lobby (No Game)");
+                lobbyScreen.classList.remove('hidden');
+                gameScreen.classList.add('hidden');
+                
+                lobbyInfo.textContent = "";
+                gameIdInput.value = "";
+                lobbyPlayersContainer.classList.add('hidden');
+                startGameBtn.classList.add('hidden');
+                return;
+            }
+            
+            // Case 2: In a "waiting" lobby
+            if (gameData.status === 'waiting') {
+                console.log("Rendering UI: Lobby (Waiting)");
+                lobbyScreen.classList.remove('hidden');
+                gameScreen.classList.add('hidden');
+                
+                lobbyInfo.textContent = `Game ID: ${gameData.gameId}. Share this code!`;
+                gameIdInput.value = gameData.gameId;
+                
+                lobbyPlayersContainer.classList.remove('hidden');
+                lobbyPlayerList.innerHTML = ''; // Clear old list
+                
+                gameData.players.forEach((playerId, index) => {
+                    const li = document.createElement('li');
+                    let text = `Player ${index + 1}`;
+                    if (playerId === currentUserId) text += " (You)";
+                    if (playerId === gameData.hostId) text += " (Host)";
+                    li.textContent = text;
+                    lobbyPlayerList.appendChild(li);
+                });
+                
+                if (currentUserId === gameData.hostId) {
+                    startGameBtn.classList.remove('hidden');
+                    if (gameData.players.length >= 2) {
+                        startGameBtn.disabled = false;
+                        startGameBtn.textContent = `Start Game (${gameData.players.length} Players)`;
+                    } else {
+                        startGameBtn.disabled = true;
+                        startGameBtn.textContent = "Waiting for players (2+)...";
+                    }
+                } else {
+                    lobbyInfo.textContent = `Joined game ${gameData.gameId}. Waiting for host to start...`;
+                    startGameBtn.classList.add('hidden');
+                }
+            }
+            
+            // Case 3: Game is "active"
+            else if (gameData.status === 'active') {
+                console.log("Rendering UI: Game Screen (Active)");
+                lobbyScreen.classList.add('hidden');
+                gameScreen.classList.remove('hidden');
+                
+                // In the next step, we'll render cards here
+            }
+        }
 
-        // --- STEP 2: Create Game Function ---
+        /**
+         * ✅ NEW: Attaches the ONE reliable listener
+         */
+        async function attachGameListener(gameId) {
+            currentGameId = gameId;
+            const gameRef = doc(getGameCollectionRef(), gameId);
+            
+            // Unsubscribe from any *previous* game listener
+            if (unsubscribeFromGame) {
+                console.log("Unsubscribing from old game listener...");
+                unsubscribeFromGame();
+            }
+
+            console.log(`Subscribing to game: ${gameId}`);
+            
+            unsubscribeFromGame = onSnapshot(gameRef, (doc) => {
+                if (!doc.exists()) {
+                    console.warn("Game document not found or was deleted!");
+                    // Game is gone, return to lobby
+                    returnToLobby();
+                    return;
+                }
+                
+                const gameData = doc.data();
+                console.log("onSnapshot received data. Status:", gameData.status);
+                
+                // Pass ALL data to the master UI function
+                renderUI(gameData);
+            });
+        }
+
+
+        // --- Button Functions ---
+
         async function createGame() {
             if (!currentUserId) {
-                lobbyInfo.textContent = "Connecting to server... try again in a moment.";
+                lobbyInfo.textContent = "Connecting... try again in a moment.";
                 return;
             }
             
@@ -194,7 +299,7 @@
             const newGameData = {
                 gameId: gameId,
                 status: 'waiting', 
-                players: [currentUserId], // Add the host as Player 1
+                players: [currentUserId],
                 hostId: currentUserId,
                 gameLog: [`Game ${gameId} created by Player 1.`]
             };
@@ -202,10 +307,10 @@
             try {
                 await setDoc(gameRef, newGameData);
                 console.log(`Game created with ID: ${gameId}`);
-                await subscribeToGame(gameId);
+                // Attach the listener
+                await attachGameListener(gameId);
 
-            } catch (error)
- {
+            } catch (error) {
                 console.error("Error creating game:", error);
                 lobbyInfo.textContent = "Failed to create game. Try again.";
             } finally {
@@ -213,11 +318,10 @@
             }
         }
 
-        // --- STEP 3: Join Game Function (REAL) ---
         async function joinGame() {
             const gameId = gameIdInput.value.trim().toUpperCase();
             if (!currentUserId) {
-                lobbyInfo.textContent = "Connecting to server... try again.";
+                lobbyInfo.textContent = "Connecting... try again.";
                 return;
             }
             if (!gameId) {
@@ -231,32 +335,37 @@
             const gameRef = doc(getGameCollectionRef(), gameId);
 
             try {
-                await runTransaction(db, async (transaction) => {
-                    const gameDoc = await transaction.get(gameRef);
-                    if (!gameDoc.exists()) {
-                        throw new Error("Game not found!");
-                    }
-                    
-                    const gameData = gameDoc.data();
-                    
-                    if (gameData.status !== 'waiting') {
-                        throw new Error("Game has already started.");
-                    }
-                    
-                    if (gameData.players.includes(currentUserId)) {
-                        // Already in the game, just subscribe
-                        return;
-                    }
-                    
-                    const players = [...gameData.players, currentUserId];
-                    transaction.update(gameRef, {
-                        players: players,
-                        gameLog: [...gameData.gameLog, `Player ${players.length} joined the lobby.`]
-                    });
-                });
+                // Check if game exists before trying to join
+                const initialDoc = await getDoc(gameRef);
+                if (!initialDoc.exists()) {
+                    throw new Error("Game not found!");
+                }
                 
-                // Transaction successful, now subscribe
-                await subscribeToGame(gameId);
+                const gameData = initialDoc.data();
+                
+                if (gameData.status !== 'waiting') {
+                    throw new Error("Game has already started.");
+                }
+                
+                if (!gameData.players.includes(currentUserId)) {
+                    // Only run transaction if we are not already in
+                    await runTransaction(db, async (transaction) => {
+                        const gameDoc = await transaction.get(gameRef);
+                        if (!gameDoc.exists()) throw new Error("Game not found!");
+                        
+                        const data = gameDoc.data();
+                        if (data.status !== 'waiting') throw new Error("Game just started!");
+                        
+                        const players = [...data.players, currentUserId];
+                        transaction.update(gameRef, {
+                            players: players,
+                            gameLog: [...data.gameLog, `Player ${players.length} joined.`]
+                        });
+                    });
+                }
+                
+                // Attach the listener
+                await attachGameListener(gameId);
 
             } catch (error) {
                 console.error("Error joining game:", error);
@@ -266,127 +375,45 @@
             }
         }
         
-        // --- STEP 2: Subscribe to Game Function (BUG FIXED) ---
-        async function subscribeToGame(gameId) {
-            currentGameId = gameId;
-            const gameRef = doc(getGameCollectionRef(), gameId);
-            
-            // Unsubscribe from any *previous* game listener
-            if (unsubscribeFromGame) {
-                console.log("Unsubscribing from old game listener...");
-                unsubscribeFromGame();
-                unsubscribeFromGame = null;
-            }
-
-            console.log(`Subscribing to game: ${gameId}`);
-            
-            unsubscribeFromGame = onSnapshot(gameRef, (doc) => {
-                if (!doc.exists()) {
-                    console.warn("Game document not found or was deleted!");
-                    return;
-                }
-                
-                const gameData = doc.data();
-                console.log("onSnapshot received data. Status:", gameData.status);
-                
-                // --- Update Lobby UI based on game data ---
-                if (gameData.status === 'waiting') {
-                    lobbyInfo.textContent = `Game ID: ${gameData.gameId}. Share this code!`;
-                    gameIdInput.value = gameData.gameId;
-                    
-                    lobbyPlayersContainer.classList.remove('hidden');
-                    lobbyPlayerList.innerHTML = ''; // Clear old list
-                    
-                    gameData.players.forEach((playerId, index) => {
-                        const li = document.createElement('li');
-                        let text = `Player ${index + 1}`;
-                        if (playerId === currentUserId) text += " (You)";
-                        if (playerId === gameData.hostId) text += " (Host)";
-                        li.textContent = text;
-                        lobbyPlayerList.appendChild(li);
-                    });
-                    
-                    if (currentUserId === gameData.hostId) {
-                        startGameBtn.classList.remove('hidden');
-                        if (gameData.players.length >= 2) {
-                            startGameBtn.disabled = false;
-                            startGameBtn.textContent = `Start Game (${gameData.players.length} Players)`;
-                        } else {
-                            startGameBtn.disabled = true;
-                            startGameBtn.textContent = "Waiting for players (2+)...";
-                        }
-                    } else {
-                        lobbyInfo.textContent = `Joined game ${gameData.gameId}. Waiting for host to start...`;
-                        startGameBtn.classList.add('hidden');
-                    }
-                } else if (gameData.status === 'active') {
-                    // --- STEP 3: Game has started! Switch screens. ---
-                    if (lobbyScreen.classList.contains('hidden')) return; // Already in game
-                    
-                    console.log("Game is active! (Heard by listener) Switching to game screen...");
-                    lobbyScreen.classList.add('hidden');
-                    gameScreen.classList.remove('hidden');
-                }
-            });
-        }
-        
-        // --- STEP 3: Start Game Function (BUG FIXED) ---
         async function startGame() {
             startGameBtn.disabled = true;
             startGameBtn.textContent = "Starting...";
 
             if (!currentGameId) {
-                lobbyInfo.textContent = "Error: No game ID found.";
-                startGameBtn.disabled = false; // Re-enable
+                lobbyInfo.textContent = "Error: No game ID.";
                 return;
             }
 
             const gameRef = doc(getGameCollectionRef(), currentGameId);
 
             try {
-                // Get the most up-to-date game data
+                // Get fresh data to check host status
                 const freshDoc = await getDoc(gameRef);
-                if (!freshDoc.exists()) throw new Error("Game not found on server.");
+                if (!freshDoc.exists()) throw new Error("Game not found.");
                 
                 const freshData = freshDoc.data();
-                const isHost = freshData.hostId === currentUserId;
-                const enoughPlayers = freshData.players.length >= 2;
-                const statusOK = freshData.status === "waiting";
-
-                console.log("Start Game - Latest Data:", freshData);
-
-                if (!isHost || !enoughPlayers || !statusOK) {
-                    lobbyInfo.textContent = "You cannot start the game.";
-                    startGameBtn.disabled = false;
-                    startGameBtn.textContent = `Start Game (${freshData.players.length} Players)`;
-                    return;
-                }
+                if (freshData.hostId !== currentUserId) throw new Error("Only the host can start.");
+                if (freshData.players.length < 2) throw new Error("Need at least 2 players.");
+                if (freshData.status !== 'waiting') throw new Error("Game already started.");
 
                 lobbyInfo.textContent = "Starting game... Dealing cards...";
 
-                // This is a transaction to safely start the game
+                // Run transaction to deal cards and start
                 await runTransaction(db, async (transaction) => {
-                    const gameDoc = await transaction.get(gameRef);
-                    if (!gameDoc.exists()) throw new Error("Game not found.");
-                    
-                    const gameData = gameDoc.data();
-                    if (gameData.status !== "waiting") throw new Error("Game already started.");
-
-                    const players = gameData.players;
+                    const players = freshData.players; // Use fresh data
                     const newDeck = createAndShuffleDeck();
                     const playerHands = {};
                     players.forEach(uid => {
-                        playerHands[uid] = newDeck.splice(0, 7); // Deal 7 cards to each
+                        playerHands[uid] = newDeck.splice(0, 7);
                     });
 
                     let firstCard = newDeck.pop();
-                    // First card can't be a Wild card OR a special action card
                     while (
                         WILD_VALUES.includes(firstCard.value) ||
                         ['Skip', 'Reverse', 'Draw Two'].includes(firstCard.value)
                     ) {
-                        newDeck.unshift(firstCard); // Put it back in
-                        firstCard = newDeck.pop(); // Get a new one
+                        newDeck.unshift(firstCard);
+                        firstCard = newDeck.pop();
                     }
 
                     transaction.update(gameRef, {
@@ -395,35 +422,44 @@
                         deck: newDeck,
                         playerHands: playerHands,
                         discardPile: [firstCard],
-                        chosenColor: firstCard.color, // Set initial color
-                        currentPlayerUid: players[0], // Host starts
-                        turnDirection: 1, // Clockwise
+                        chosenColor: firstCard.color,
+                        currentPlayerUid: players[0],
+                        turnDirection: 1,
                         gameLog: [
-                            ...gameData.gameLog,
-                            `Host started the game with ${players.length} players. Player 1's turn.`,
+                            ...freshData.gameLog,
+                            `Host started the game. Player 1's turn.`,
                         ],
                     });
                 });
 
-                // ✅ THE REAL FIX: Manually switch the host's screen
-                // We will not wait for the failing listener.
-                console.log("Start game transaction successful! Manually switching screen for host.");
-                lobbyScreen.classList.add('hidden');
-                gameScreen.classList.remove('hidden');
+                console.log("Start game transaction successful!");
+                // The onSnapshot listener will see "status: active"
+                // and call renderUI to switch the screen.
             
             } catch (error) {
                 console.error("Error starting game:", error);
                 lobbyInfo.textContent = "Start Game failed: " + error.message;
+                // Re-enable button on failure
                 startGameBtn.disabled = false;
                 startGameBtn.textContent = "Start Game";
             }
         }
 
+        function returnToLobby() {
+            console.log("Returning to lobby...");
+            if (unsubscribeFromGame) {
+                unsubscribeFromGame();
+                unsubscribeFromGame = null;
+            }
+            currentGameId = null;
+            
+            // Call the master UI function with no data
+            renderUI(null);
+        }
 
-        // --- STEP 3: Card Utility Functions ---
+        // --- Card Utility Functions ---
         function createAndShuffleDeck() {
             let newDeck = [];
-            // Create colored cards
             for (const color of COLORS) {
                 newDeck.push({ color, value: '0' });
                 for (let i = 1; i <= 9; i++) {
@@ -435,14 +471,12 @@
                     newDeck.push({ color, value });
                 }
             }
-            // Create wild cards
             for (const value of WILD_VALUES) {
                 for (let i = 0; i < 4; i++) {
                     newDeck.push({ color: 'Wild', value });
                 }
             }
             
-            // Fisher-Yates Shuffle
             for (let i = newDeck.length - 1; i > 0; i--) {
                 const j = Math.floor(Math.random() * (i + 1));
                 [newDeck[i], newDeck[j]] = [newDeck[j], newDeck[i]];
@@ -450,35 +484,7 @@
             return newDeck;
         }
 
-        // --- STEP 2: Leave Game / Return to Lobby ---
-        function returnToLobby() {
-            console.log("Returning to lobby...");
-            if (unsubscribeFromGame) {
-                unsubscribeFromGame();
-                unsubscribeFromGame = null;
-            }
-            currentGameId = null;
-            
-            gameScreen.classList.add('hidden');
-            lobbyScreen.classList.remove('hidden');
-            
-            // Reset lobby UI
-            lobbyInfo.textContent = "";
-            gameIdInput.value = "";
-            lobbyPlayersContainer.classList.add('hidden');
-            startGameBtn.classList.add('hidden');
-        }
-
-        leaveGameBtn.onclick = returnToLobby;
-        
-        
-        // --- Init Click Listeners ---
-        createGameBtn.onclick = createGame;
-        joinGameBtn.onclick = joinGame;
-        startGameBtn.onclick = startGame;
-
-
-        console.log("Step 3: Join/Start Game Logic Initialized.");
+        console.log("Simple Lobby Initialized.");
         init(); // Start the app
 
     </script>
