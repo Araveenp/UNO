@@ -35,17 +35,55 @@
             background: radial-gradient(circle, #0a8f44 0%, #043a1b 100%);
             height: 100vh;
             width: 100vw;
-            display: flex; /* Keep display:flex for centering */
+            /* ✅ STEP 4: Changed from centered to space-between */
+            display: flex; 
             flex-direction: column;
             align-items: center;
-            justify-content: center; /* Center content */
+            justify-content: space-between; /* Space for hands and board */
             padding: 10px;
         }
+
+        /* ✅ STEP 4: Card Styling */
+        .card {
+            width: 80px;
+            height: 120px;
+            border-radius: 8px;
+            background-color: #1a202c;
+            border: 2px solid white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            font-weight: bold;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+            position: relative;
+            cursor: pointer;
+        }
+        
+        .card.disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .card.red { background-color: #EF4444; }
+        .card.yellow { background-color: #F59E0B; }
+        .card.green { background-color: #10B981; }
+        .card.blue { background-color: #3B82F6; }
+        .card.wild { background-color: #1F2937; } /* Dark for Wild */
+
+        /* Card color swatch for Wild */
+        .color-swatch {
+            width: 100%;
+            height: 100%;
+            border-radius: 6px;
+            opacity: 0.8;
+        }
+
     </style>
 </head>
 <body class="text-white font-sans">
 
-    <!-- LOBBY SCREEN -->
+    <!-- LOBBY SCREEN (No changes) -->
     <div id="lobby-screen">
         <div class="w-full max-w-md text-center mx-auto relative z-10">
             <h1 class="text-6xl font-extrabold mb-8 text-white" style="filter: drop-shadow(0 0 10px rgba(255, 255, 0, 0.5));">
@@ -82,21 +120,69 @@
         </div>
     </div>
 
-    <!-- GAME "PLAYGROUND" SCREEN -->
+    <!-- ✅ STEP 4: GAME "PLAYGROUND" SCREEN (Updated HTML) -->
     <div id="game-screen" class="hidden">
         
-        <h1 class="text-5xl font-bold text-white mb-8">Game Has Started!</h1>
-        <p class="text-xl text-gray-200 mb-8">This is where the cards will go.</p>
+        <!-- Opponent Area -->
+        <div class="w-full pt-4">
+            <h2 class="text-center text-xl font-bold mb-2">Opponents' Hands</h2>
+            <div id="opponent-hands" class="flex justify-center flex-wrap gap-4 p-4 min-h-[100px]">
+                <!-- Opponent hands will be rendered here -->
+            </div>
+        </div>
 
-        <button id="leave-game-btn" class="bg-red-500 hover:bg-red-600 text-white font-bold py-3 px-6 rounded-lg text-lg">
-            Leave Game (Back to Lobby)
-        </button>
+        <!-- Game Board Area -->
+        <div class="flex-grow flex items-center justify-around w-full max-w-6xl mx-auto px-4">
+            
+            <!-- Player List & Info -->
+            <div class="w-1/3 max-w-xs bg-black bg-opacity-30 p-4 rounded-lg shadow-lg">
+                <h3 class="text-center text-lg font-bold mb-3">Player Order</h3>
+                <ol id="player-list" class="flex flex-col space-y-2">
+                    <!-- Player list items will be rendered here -->
+                </ol>
+            </div>
+
+            <!-- Deck and Discard -->
+            <div class="flex items-center justify-center space-x-8">
+                <!-- Draw Pile -->
+                <div>
+                    <div id="draw-pile" class="card">
+                        UNO
+                    </div>
+                    <p class="text-center mt-2 font-semibold">Draw Pile</p>
+                </div>
+                
+                <!-- Discard Pile -->
+                <div>
+                    <div id="discard-pile" class="card">
+                        <!-- Top card of discard pile will be rendered here -->
+                    </div>
+                    <p class="text-center mt-2 font-semibold">Discard Pile</p>
+                </div>
+            </div>
+            
+            <!-- Game Log / Action Area -->
+            <div class="w-1/3 max-w-xs">
+                <button id="leave-game-btn" class="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-3 px-6 rounded-lg text-lg">
+                    Leave Game
+                </button>
+            </div>
+
+        </div>
+
+        <!-- Player Hand Area -->
+        <div class="w-full">
+            <h2 class="text-center text-xl font-bold mt-2">Your Hand</h2>
+            <div id="player-hand" class="flex justify-center flex-wrap gap-2 p-4 min-h-[140px]">
+                <!-- Player's cards will be rendered here -->
+            </div>
+        </div>
 
     </div>
 
 
     <script type="module">
-        // --- Firebase Imports ---
+        // --- Firebase Imports (No change) ---
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { 
             getAuth, 
@@ -125,8 +211,16 @@
         const lobbyInfo = document.getElementById('lobby-info');
         const lobbyPlayersContainer = document.getElementById('lobby-players-container');
         const lobbyPlayerList = document.getElementById('lobby-player-list');
+        
+        // --- ✅ STEP 4: New Game Screen DOM Elements ---
+        const playerHandEl = document.getElementById('player-hand');
+        const opponentHandsEl = document.getElementById('opponent-hands');
+        const playerListEl = document.getElementById('player-list');
+        const discardPileEl = document.getElementById('discard-pile');
+        const drawPileEl = document.getElementById('draw-pile');
 
-        // --- Firebase Config ---
+
+        // --- Firebase Config (No change) ---
         const firebaseConfig = {
           apiKey: "AIzaSyDIPxkUrfyMSzdddaBHHQ7hrhTMbTlOvao",
           authDomain: "uno-game-3e82a.firebaseapp.com",
@@ -137,18 +231,18 @@
           measurementId: "G-MBZTN7G8MC"
         };
         
-        // --- Global State ---
+        // --- Global State (No change) ---
         let app, auth, db;
         let currentUserId = null;
         let currentGameId = null;
-        let unsubscribeFromGame = null; // This will hold the listener function
+        let unsubscribeFromGame = null;
 
-        // --- Card Constants ---
+        // --- Card Constants (No change) ---
         const COLORS = ['Red', 'Yellow', 'Green', 'Blue'];
         const VALUES = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'Skip', 'Reverse', 'Draw Two'];
         const WILD_VALUES = ['Wild', 'Wild Draw Four'];
 
-        // --- Main Initialization ---
+        // --- Main Initialization (No change) ---
         async function init() {
             try {
                 app = initializeApp(firebaseConfig);
@@ -181,14 +275,13 @@
             }
         }
 
-        // --- Database Helper ---
+        // --- Database Helper (No change) ---
         function getGameCollectionRef() {
             return collection(db, "unoGames");
         }
         
         /**
-         * ✅ NEW: The One Master UI Function
-         * This is the ONLY function that shows/hides elements.
+         * ✅ STEP 4: The One Master UI Function (Updated)
          */
         function renderUI(gameData) {
             // Case 1: No game / In lobby
@@ -246,9 +339,90 @@
                 lobbyScreen.classList.add('hidden');
                 gameScreen.classList.remove('hidden');
                 
-                // In the next step, we'll render cards here
+                // --- ✅ STEP 4: Render the Game ---
+                
+                // Render your hand
+                playerHandEl.innerHTML = '';
+                const myHand = gameData.playerHands[currentUserId] || [];
+                myHand.forEach((card, index) => {
+                    const cardEl = createCardElement(card);
+                    // We'll add click handlers next step
+                    playerHandEl.appendChild(cardEl);
+                });
+
+                // Render opponent hands (just backs)
+                opponentHandsEl.innerHTML = '';
+                playerListEl.innerHTML = ''; // Clear and rebuild
+                
+                const currentPlayerIndex = gameData.players.indexOf(gameData.currentPlayerUid);
+
+                gameData.players.forEach((playerId, index) => {
+                    // Add to player list
+                    const li = document.createElement('li');
+                    li.className = "p-2 rounded-md text-gray-200 font-semibold";
+                    let text = `Player ${index + 1}`;
+                    if (playerId === currentUserId) text += " (You)";
+                    if (index === currentPlayerIndex) {
+                        li.classList.add("bg-yellow-500", "text-black");
+                    }
+                    li.textContent = text;
+                    playerListEl.appendChild(li);
+
+                    // Render opponent hands
+                    if (playerId !== currentUserId) {
+                        const opponentCardCount = gameData.playerHands[playerId]?.length || 0;
+                        const opponentHandContainer = document.createElement('div');
+                        opponentHandContainer.className = "text-center";
+                        opponentHandContainer.innerHTML = `<p>Player ${index + 1} (${opponentCardCount} cards)</p>`;
+                        
+                        const cardsContainer = document.createElement('div');
+                        cardsContainer.className = "flex justify-center gap-1 mt-1";
+                        for (let i = 0; i < opponentCardCount; i++) {
+                            cardsContainer.appendChild(createCardElement(null, true)); // true = face down
+                        }
+                        opponentHandContainer.appendChild(cardsContainer);
+                        opponentHandsEl.appendChild(opponentHandContainer);
+                    }
+                });
+
+                // Render discard pile
+                discardPileEl.innerHTML = '';
+                const topCard = gameData.discardPile[gameData.discardPile.length - 1];
+                if (topCard) {
+                    const topCardEl = createCardElement(topCard);
+                    // If wild, show chosen color
+                    if (topCard.color === 'Wild' && gameData.chosenColor) {
+                        const swatch = document.createElement('div');
+                        swatch.className = "color-swatch";
+                        swatch.style.backgroundColor = gameData.chosenColor.toLowerCase();
+                        topCardEl.innerHTML = ''; // Clear text
+                        topCardEl.appendChild(swatch);
+                    }
+                    discardPileEl.appendChild(topCardEl);
+                }
             }
         }
+        
+        // --- ✅ STEP 4: Card Element Helper ---
+        function createCardElement(card, isFaceDown = false) {
+            const cardEl = document.createElement('div');
+            cardEl.className = 'card';
+            
+            if (isFaceDown) {
+                cardEl.textContent = 'UNO';
+            } else {
+                cardEl.classList.add(card.color.toLowerCase());
+                let value = card.value;
+                if (value === 'Draw Two') value = '+2';
+                if (value === 'Wild Draw Four') value = '+4';
+                if (value === 'Wild') value = 'W';
+                if (value === 'Skip') value = 'S';
+                if (value === 'Reverse') value = 'R';
+                cardEl.textContent = value;
+            }
+            return cardEl;
+        }
+
 
         /**
          * ✅ NEW: Attaches the ONE reliable listener
@@ -282,7 +456,7 @@
         }
 
 
-        // --- Button Functions ---
+        // --- Button Functions (No change) ---
 
         async function createGame() {
             if (!currentUserId) {
@@ -457,7 +631,7 @@
             renderUI(null);
         }
 
-        // --- Card Utility Functions ---
+        // --- Card Utility Functions (No change) ---
         function createAndShuffleDeck() {
             let newDeck = [];
             for (const color of COLORS) {
