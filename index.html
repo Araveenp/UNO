@@ -287,7 +287,7 @@
                 }
                 
                 const gameData = doc.data();
-                console.log("onSnapshot received data. Status:", gameData.status); // <-- ADDED LOG
+                console.log("onSnapshot received data. Status:", gameData.status);
                 
                 // --- Update Lobby UI based on game data ---
                 if (gameData.status === 'waiting') {
@@ -321,7 +321,6 @@
                     }
                 } else if (gameData.status === 'active') {
                     // --- STEP 3: Game has started! Switch screens. ---
-                    // ✅ THIS IS NOW THE ONLY PLACE THE SCREEN SWITCHES.
                     if (lobbyScreen.classList.contains('hidden')) return; // Already in game
                     
                     console.log("Game is active! (Heard by listener) Switching to game screen...");
@@ -406,9 +405,11 @@
                     });
                 });
 
-                // ✅ FIX: Removed the manual screen switch.
-                // The onSnapshot listener will now handle this reliably.
-                console.log("Start game transaction successful! onSnapshot will handle screen switch.");
+                // ✅ THE REAL FIX: Manually switch the host's screen
+                // We will not wait for the failing listener.
+                console.log("Start game transaction successful! Manually switching screen for host.");
+                lobbyScreen.classList.add('hidden');
+                gameScreen.classList.remove('hidden');
             
             } catch (error) {
                 console.error("Error starting game:", error);
