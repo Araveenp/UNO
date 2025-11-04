@@ -70,8 +70,8 @@
             <!-- Player List --><div id="lobby-players-container" class="hidden mt-6 w-full">
                 <h3 class="text-xl font-semibold mb-2">Players in Lobby:</h3>
                 <ul id="lobby-player-list" class="list-none bg-black bg-opacity-20 rounded-lg p-4 text-left min-h-[50px]">
-                    <li>Player 1 (You) (Host)</li>
-                    <li>Player 2</li>
+                    <!-- <li>Player 1 (You) (Host)</li> -->
+                    <!-- <li>Player 2</li> -->
                 </ul>
             </div>
 
@@ -97,6 +97,18 @@
 
 
     <script type="module">
+        // --- STEP 1: Firebase Imports ---
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { 
+            getAuth, 
+            signInAnonymously, 
+            onAuthStateChanged
+        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { 
+            getFirestore
+            // We will add more imports here in the next step
+        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
         // --- DOM Elements ---
         const lobbyScreen = document.getElementById('lobby-screen');
         const gameScreen = document.getElementById('game-screen');
@@ -107,22 +119,74 @@
         const lobbyInfo = document.getElementById('lobby-info');
         const lobbyPlayersContainer = document.getElementById('lobby-players-container');
 
-        // --- Simple Click Listeners ---
+        // --- STEP 1: Firebase Config ---
+        const firebaseConfig = {
+          apiKey: "AIzaSyDIPxkUrfyMSzdddaBHHQ7hrhTMbTlOvao",
+          authDomain: "uno-game-3e82a.firebaseapp.com",
+          projectId: "uno-game-3e82a",
+          storageBucket: "uno-game-3e82a.firebasestorage.app",
+          messagingSenderId: "40853251329",
+          appId: "1:40853251329:web:c57964dcf70b8d3f4fe700",
+          measurementId: "G-MBZTN7G8MC"
+        };
+        
+        let app, auth, db;
+        let currentUserId = null;
+
+        // --- STEP 1: Firebase Initialization ---
+        async function init() {
+            try {
+                app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
+                
+                onAuthStateChanged(auth, async (user) => {
+                    if (user) {
+                        // User is signed in anonymously
+                        currentUserId = user.uid;
+                        console.log("User authenticated with ID:", currentUserId);
+                    } else {
+                        // User is signed out
+                        currentUserId = null;
+                        console.log("No user. Signing in anonymously...");
+                        await signInAnonymously(auth);
+                    }
+                });
+
+            } catch (error) {
+                console.error("Firebase Init Error:", error);
+                lobbyInfo.textContent = "Error connecting to server.";
+            }
+        }
+
+        // --- Simple Click Listeners (Updated for Step 1) ---
 
         // Simulate creating a game
         createGameBtn.onclick = () => {
-            lobbyInfo.textContent = "Game Created! ID: FAKE123. Waiting for players...";
+            if (!currentUserId) {
+                lobbyInfo.textContent = "Connecting to server... try again in a moment.";
+                return;
+            }
+            console.log("Authenticated with User ID:", currentUserId);
+            lobbyInfo.textContent = "Authenticated! Ready for next step.";
+            
+            // This is still temporary:
             lobbyPlayersContainer.classList.remove('hidden');
             startGameBtn.classList.remove('hidden');
-            startGameBtn.textContent = "Start Game (2 Players)";
+            startGameBtn.textContent = "Start Game (Fake Lobby)";
         };
 
         // Simulate joining a game
         joinGameBtn.onclick = () => {
-            lobbyInfo.textContent = "Joined Game FAKE123. Waiting for host to start...";
+             if (!currentUserId) {
+                lobbyInfo.textContent = "Connecting to server... try again in a moment.";
+                return;
+            }
+            console.log("Authenticated with User ID:", currentUserId);
+            lobbyInfo.textContent = "Authenticated! Ready for next step.";
+            
+            // This is still temporary:
             lobbyPlayersContainer.classList.remove('hidden');
-            // Hide start button if not host (simulating)
-            // startGameBtn.classList.add('hidden'); 
         };
 
         // This button will now *only* switch the screens
@@ -144,7 +208,8 @@
             startGameBtn.classList.add('hidden');
         };
 
-        console.log("Simple Lobby Tester Initialized.");
+        console.log("Step 1: Firebase Auth Initialized.");
+        init(); // Start the app
 
     </script>
 </body>
