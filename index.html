@@ -20,8 +20,8 @@
 
         /* Lobby Background */
         #lobby-screen {
-            /* FIX: Replaced unreliable imgur link with stable github link */
-            background-image: url('https://raw.githubusercontent.com/ht-sard/uno-assets/main/misc/uno_bg.png');
+            /* FIX: Switched back to a more reliable imgur link */
+            background-image: url('https://i.imgur.com/W29F1rM.png');
             background-size: cover;
             background-position: center;
             height: 100vh;
@@ -198,7 +198,8 @@
           of the full-screen background.
         -->
         <div class="w-full max-w-md text-center mx-auto relative z-10">
-            <img src="https://raw.githubusercontent.com/ht-sard/uno-assets/main/misc/uno_logo.png" alt="UNO Logo" class="uno-logo-animated max-w-[200px] mb-8 mx-auto">
+            <!-- FIX: Switched to a more reliable imgur link for the logo -->
+            <img src="https://i.imgur.com/fQk2T1d.png" alt="UNO Logo" class="uno-logo-animated max-w-[200px] mb-8 mx-auto">
             
             <div class="space-y-6">
                 <button id="create-game-btn" class="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-4 px-6 rounded-lg text-xl transition duration-200 transform hover:scale-105 shadow-lg">
@@ -365,7 +366,7 @@
 
         // --- Card Images CDN ---
         const IMAGE_CDN_URL = "https://raw.githubusercontent.com/ht-sard/uno-assets/main/cards/";
-        const UNO_LOGO_URL = "https://raw.githubusercontent.com/ht-sard/uno-assets/main/misc/uno_logo.png";
+        const UNO_LOGO_URL = "https://i.imgur.com/fQk2T1d.png"; // FIX: Using Imgur
 
 
         // --- Sound Effects (using Tone.js) ---
@@ -537,11 +538,16 @@
         }
 
         async function subscribeToGame(gameId) {
+            // Clean up *any* existing listener before starting a new one.
+            if (unsubscribeFromGame) {
+                console.log("Cleaning up old game subscription.");
+                unsubscribeFromGame();
+                unsubscribeFromGame = null;
+            }
+
             currentGameId = gameId;
             const gameRef = doc(getGameCollectionRef(), gameId);
             console.log(`Subscribing to game ${gameId}`);
-
-            if (unsubscribeFromGame) unsubscribeFromGame();
 
             unsubscribeFromGame = onSnapshot(gameRef, (doc) => {
                 if (!doc.exists()) {
@@ -574,8 +580,7 @@
                     showMessage(message, 5000, true);
                     if (winnerUid === currentUserId) playSfx('win');
                     
-                    if (unsubscribeFromGame) unsubscribeFromGame(); // Stop listening
-                    unsubscribeFromGame = null;
+                    // FIX: DO NOT unsubscribe here. Let returnToLobby handle the cleanup.
                     setTimeout(returnToLobby, 5000);
 
                 } else if (localGameData.status === 'waiting') {
