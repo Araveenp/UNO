@@ -199,20 +199,32 @@
         const startGameBtn = document.getElementById('start-game-btn');
         
         // --- Firebase Config ---
+        // -----------------------------------------------------------------
+        // START: PASTE YOUR FIREBASE CONFIG HERE
+        //
+        // 1. Go to https://console.firebase.google.com/
+        // 2. Create a new project.
+        // 3. Add a "Web App" (click the </> icon).
+        // 4. Copy the 'firebaseConfig' object from Firebase and paste it below.
+        //
+        // END: PASTE YOUR FIREBASE CONFIG HERE
+        // -----------------------------------------------------------------
+        
         // For Firebase JS SDK v7.20.0 and later, measurementId is optional
-const firebaseConfig = {
-  apiKey: "AIzaSyDIPxkUrfyMSzdddaBHHQ7hrhTMbTlOvao",
-  authDomain: "uno-game-3e82a.firebaseapp.com",
-  projectId: "uno-game-3e82a",
-  storageBucket: "uno-game-3e82a.firebasestorage.app",
-  messagingSenderId: "40853251329",
-  appId: "1:40853251329:web:c57964dcf70b8d3f4fe700",
-  measurementId: "G-MBZTN7G8MC"
-};
-        // These variables are provided by the environment.
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
-        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+        const firebaseConfig = {
+          apiKey: "AIzaSyDIPxkUrfyMSzdddaBHHQ7hrhTMbTlOvao",
+          authDomain: "uno-game-3e82a.firebaseapp.com",
+          projectId: "uno-game-3e82a",
+          storageBucket: "uno-game-3e82a.firebasestorage.app",
+          messagingSenderId: "40853251329",
+          appId: "1:40853251329:web:c57964dcf70b8d3f4fe700",
+          measurementId: "G-MBZTN7G8MC"
+        };
+
+        // We get the appId directly from your config now.
+        const appId = firebaseConfig.appId; 
+        // We don't have an initialAuthToken, so we will sign in anonymously.
+        const initialAuthToken = null; 
 
         let app, auth, db;
         let currentUserId = null;
@@ -243,8 +255,10 @@ const firebaseConfig = {
                     } else {
                         // No user, try to sign in
                         if (initialAuthToken) {
+                            // This path is unlikely now but kept for safety
                             await signInWithCustomToken(auth, initialAuthToken);
                         } else {
+                            // Sign in anonymously as we're on a public page
                             await signInAnonymously(auth);
                         }
                     }
@@ -268,6 +282,7 @@ const firebaseConfig = {
 
         function getGameCollectionRef() {
             // Use the public path for shared game data
+            // We use the appId from your config to build the correct path
             return collection(db, `artifacts/${appId}/public/data/unoGames`);
         }
 
