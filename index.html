@@ -20,7 +20,6 @@
 
         /* Lobby Background */
         #lobby-screen {
-            /* FIX: Removed unreliable background image */
             background-color: #1a202c; /* Dark background */
             background-image: radial-gradient(circle, #2d3748 0%, #1a202c 100%);
             height: 100vh;
@@ -163,7 +162,6 @@
 
     <div id="lobby-screen">
         <div class="w-full max-w-md text-center mx-auto relative z-10">
-            <!-- FIX: Removed unreliable img tag and replaced with a text title -->
             <h1 class="text-6xl font-extrabold mb-8 text-white" style="filter: drop-shadow(0 0 10px rgba(255, 255, 0, 0.5));">
                 Online UNO
             </h1>
@@ -322,18 +320,17 @@
         let currentGameId = null;
         let unsubscribeFromGame = null;
 
+        // --- FIX for 'stuck in lobby' bug ---
+        let returnToLobbyTimer = null; 
+
         let localGameData = {};
         let myHand = [];
         let isAudioEnabled = false; 
 
         // --- Card Images CDN ---
         const IMAGE_CDN_URL = "https://raw.githubusercontent.com/ht-sard/uno-assets/main/cards/";
-        // FIX: Removed logo URL
-        // const UNO_LOGO_URL = "https://i.imgur.com/fQk2T1d.png"; 
-
 
         // --- Sound Effects (using Tone.js) ---
-        // Create synths and effects once
         const synth = new Tone.Synth().toDestination();
         const pluckSynth = new Tone.PluckSynth().toDestination();
         const winSampler = new Tone.Sampler({
@@ -342,15 +339,15 @@
         }).toDestination();
 
         const sounds = {
-            play: () => { // "Swoosh" sound
+            play: () => { 
                 synth.triggerAttackRelease("C5", "8n", Tone.now());
                 synth.frequency.rampTo("C6", "8n", Tone.now() + 0.05);
             },
-            draw: () => { // "Zip" sound
+            draw: () => { 
                 synth.triggerAttackRelease("A2", "16n", Tone.now());
                 synth.frequency.rampTo("E3", "16n", Tone.now() + 0.05);
             },
-            join: () => { // "Bloop" sound
+            join: () => { 
                 pluckSynth.triggerAttack("C4", Tone.now());
             },
             win: () => {
@@ -391,7 +388,6 @@
                     if (user) {
                         currentUserId = user.uid;
                         console.log("User authenticated:", currentUserId);
-                        // lobbyScreen.classList.remove('hidden'); // Lobby is visible by default now
                     } else {
                         console.log("User not authenticated, signing in anonymously...");
                         if (initialAuthToken) {
@@ -501,6 +497,15 @@
         }
 
         async function subscribeToGame(gameId) {
+            // --- FIX for 'stuck in lobby' bug ---
+            // Cancel any pending timers from a *previous* game
+            if (returnToLobbyTimer) {
+                clearTimeout(returnToLobbyTimer);
+                returnToLobbyTimer = null;
+                console.log("Cancelled pending lobby return timer.");
+            }
+            // --- END FIX ---
+
             // Clean up *any* existing listener before starting a new one.
             if (unsubscribeFromGame) {
                 console.log("Cleaning up old game subscription.");
@@ -535,7 +540,6 @@
                     
                 } else if (localGameData.status === 'finished') {
                     console.log("Game finished. Winner:", localGameData.winner);
-                    // Handle game over logic
                     renderGameUI(); // Render final state
                     const winnerUid = localGameData.winner;
                     const winnerIndex = localGameData.players.indexOf(winnerUid);
@@ -543,17 +547,18 @@
                     showMessage(message, 5000, true);
                     if (winnerUid === currentUserId) playSfx('win');
                     
-                    // --- FIX ---
-                    // Unsubscribe immediately to prevent race conditions
-                    // if the user starts a new game.
                     if (unsubscribeFromGame) {
                         console.log("Unsubscribing from finished game.");
                         unsubscribeFromGame();
                         unsubscribeFromGame = null;
                     }
+
+                    // --- FIX for 'stuck in lobby' bug ---
+                    // Set the timer to return to lobby
+                    console.log("Setting timer to return to lobby.");
+                    returnToLobbyTimer = setTimeout(returnToLobby, 5000);
                     // --- END FIX ---
 
-                    setTimeout(returnToLobby, 5000);
 
                 } else if (localGameData.status === 'waiting') {
                     console.log("Updating lobby screen.");
@@ -597,16 +602,16 @@
         }
 
         function returnToLobby() {
-            // --- FIX ---
-            // The listener should *already* be unsubscribed by the 'finished'
-            // block. This function is now just for resetting state.
-            // We only check and unsubscribe if something went wrong and
-            // the listener is *still* active (e.g., user manually left).
-            if (unsubscribeFromGame) {
-                console.log("Unsubscribing from game via returnToLobby.");
-                unsubscribeFromGame();
-                unsubscribeFromGame = null;
+            // --- FIX for 'stuck in lobby' bug ---
+            // Clear any pending timer, just in case.
+            if (returnToLobbyTimer) {
+                clearTimeout(returnToLobbyTimer);
+                returnToLobbyTimer = null;
             }
+            
+            // We NO LONGER call unsubscribeFromGame() here.
+            // This was the bug. Unsubscribing happens *only* when
+            // subscribing to a new game or when 'finished' is detected.
             // --- END FIX ---
             
             currentGameId = null;
@@ -624,12 +629,18 @@
 
         async function startGame() {
             console.log("Start game button clicked.");
+            if (!localGameData || !localGameData.players) {
+                showMessage("Game data not loaded yet.", 2000);
+                console.warn("Start game validation failed: localGameData not loaded.");
+                return;
+            }
+            
             const isHost = currentUserId === localGameData.players[0];
             const enoughPlayers = localGameData.players.length >= 2;
 
             if (!isHost || !enoughPlayers || localGameData.status !== 'waiting') {
                 showMessage("You cannot start the game.", 2000);
-                console.warn("Start game validation failed.");
+                console.warn("Start game validation failed:", { isHost, enoughPlayers, status: localGameData.status });
                 return;
             }
 
@@ -643,7 +654,12 @@
                     if (!gameDoc.exists()) throw new Error("Game not found.");
                     
                     const gameData = gameDoc.data();
-                    if (gameData.status !== 'waiting') throw new Error("Game already started.");
+                    if (gameData.status !== 'waiting') {
+                        // This can happen if another player joins/leaves right as host clicks start
+                        // Or if this is a double-click
+                        console.warn("Game status was not 'waiting' in transaction.");
+                        throw new Error("Game already started or lobby changed.");
+                    }
 
                     const players = gameData.players;
                     const newDeck = createAndShuffleDeck();
@@ -674,6 +690,7 @@
             } catch (error) {
                 console.error("Error starting game:", error);
                 lobbyInfo.textContent = error.message;
+                showMessage(error.message, 3000);
             }
         }
 
@@ -689,9 +706,6 @@
             };
         }
 
-        /**
-         * New function to map card object to its image file name
-         */
         function getCardImageUrl(card, isFaceDown = false) {
             if (isFaceDown) {
                 return `${IMAGE_CDN_URL}card_back.png`;
@@ -712,9 +726,6 @@
             return `${IMAGE_CDN_URL}${color}_${value}.png`;
         }
 
-        /**
-         * Renders a single card element using <img>
-         */
         function renderCard(card, isFaceDown = false) {
             const cardEl = document.createElement('div');
             cardEl.className = 'card';
@@ -728,7 +739,10 @@
         }
 
         function renderGameUI() {
-            if (!localGameData.status || localGameData.status === 'waiting') return;
+            if (!localGameData.status || localGameData.status === 'waiting' || !localGameData.players) {
+                console.warn("RenderGameUI called with incomplete data.");
+                return;
+            }
 
             const isMyTurn = localGameData.currentPlayerUid === currentUserId;
             const topCard = getTopCard();
@@ -773,9 +787,8 @@
             // Render Draw Pile
             drawPileEl.innerHTML = '';
             drawPileEl.appendChild(renderCard(null, true));
-            if (isMyTurn && !isValidPlay(null, topCard, localGameData)) { // Special case for "Draw"
-                drawPileEl.classList.remove('disabled');
-            } else if (isMyTurn) {
+            // You can always click the draw pile on your turn
+            if (isMyTurn) {
                 drawPileEl.classList.remove('disabled');
             } else {
                 drawPileEl.classList.add('disabled');
@@ -799,7 +812,9 @@
             });
             
             // Animate highlight
-            turnHighlightEl.style.transform = `translateY(${currentPlayerIndex * 44}px)`; // 44px is item height (p-3 + space-y-2)
+            if(currentPlayerIndex >= 0) {
+                turnHighlightEl.style.transform = `translateY(${currentPlayerIndex * 44}px)`; // 44px is item height (p-3 + space-y-2)
+            }
             
             // Animate direction
             if (localGameData.turnDirection === 1) {
@@ -831,9 +846,12 @@
         }
 
         function isValidPlay(card, topCard, gameData) {
-            // This function is now run on the client-side *first* to enable/disable cards.
-            // The server will run the same logic again in the transaction.
             const pendingDraw = gameData.pendingDrawCount > 0;
+            
+            if (!topCard) {
+                console.warn("isValidPlay check failed: No top card.");
+                return false; // Should not happen after game start
+            }
             
             // This check is for drawing cards
             if (card === null) { 
@@ -857,7 +875,7 @@
             // Standard play rules
             if (card.color === 'Wild') return true;
             if (card.color === activeColor) return true;
-            if (card.value === topCard.value) return true; // Allows 🟩Skip on 🟥Skip (your rule)
+            if (card.value === topCard.value) return true;
             
             return false;
         }
@@ -883,13 +901,12 @@
                     
                     const topCard = gameData.discardPile[gameData.discardPile.length - 1];
                     
-                    // Re-validate inside transaction
                     if (!isValidPlay(card, topCard, gameData)) {
                         console.warn("Invalid card play attempted.", { card, topCard, gameData });
                         throw new Error("Invalid card play!");
                     }
                     
-                    let playerHand = gameData.playerHands[currentUserId];
+                    let playerHand = [...gameData.playerHands[currentUserId]]; // Make a copy
                     const playedCard = playerHand.splice(cardIndex, 1)[0];
                     
                     let discardPile = [...gameData.discardPile];
@@ -928,12 +945,12 @@
                             break;
                         case 'Draw Two':
                             pendingDrawCount += 2;
-                            gameLog.push(`Stack is at +${pendingDrawCount}!`); // FIX: Typo
+                            gameLog.push(`Stack is at +${pendingDrawCount}!`);
                             chosenColor = playedCard.color;
                             break;
                         case 'Wild Draw Four':
                             pendingDrawCount += 4;
-                            gameLog.push(`Stack is at +${pendingDrawCount}!`); // FIX: Typo
+                            gameLog.push(`Stack is at +${pendingDrawCount}!`);
                             break; // Color chosen later
                         case 'Wild':
                             chosenColor = null; // Color chosen later
@@ -982,6 +999,7 @@
                     // Calculate next player
                     nextPlayerIndex = (currentPlayerIndex + newDirection + numPlayers) % numPlayers;
                     if (skipTurn) {
+                        gameLog.push(`Player ${nextPlayerIndex + 1} was skipped!`);
                         nextPlayerIndex = (nextPlayerIndex + newDirection + numPlayers) % numPlayers;
                     }
                     
@@ -1021,7 +1039,6 @@
                     
                     const gameData = gameDoc.data();
                     
-                    // Check if we are still awaiting color from the correct player
                     if (gameData.status !== 'awaiting_color' || gameData.currentPlayerUid !== currentUserId) {
                         console.warn("handleSelectColor called at wrong time.");
                         return;
@@ -1101,6 +1118,13 @@
                         
                         // Turn is skipped, stack is cleared
                         gameLog.push(`Player ${nextPlayerIndex + 1}'s turn.`);
+                        
+                        const topCard = getTopCardFromPile(discardPile);
+                        let newChosenColor = topCard.color;
+                        if(topCard.color === 'Wild') {
+                            newChosenColor = gameData.chosenColor; // Keep the chosen color from the wild card
+                        }
+                        
                         transaction.update(gameRef, {
                             deck: deck,
                             discardPile: discardPile,
@@ -1108,7 +1132,7 @@
                             currentPlayerUid: nextPlayerUid, // Turn is skipped
                             gameLog: gameLog,
                             pendingDrawCount: 0, // Stack cleared
-                            chosenColor: getTopCardFromPile(discardPile).color === 'Wild' ? getTopCardFromPile(discardPile).chosenColor : getTopCardFromPile(discardPile).color // Reset color
+                            chosenColor: newChosenColor 
                         });
 
                     } else {
@@ -1210,6 +1234,7 @@
         function showMessage(text, duration = 3000, isPermanent = false) {
             const container = document.getElementById('message-container');
             
+            // Clear existing non-permanent messages
             document.querySelectorAll('.game-message').forEach(msg => msg.remove());
 
             const msgBox = document.createElement('div');
