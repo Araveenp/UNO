@@ -201,7 +201,7 @@
                 </div>
             </div>
             
-            <!-- ✅ STEP 5: Draw Count Indicator -->
+            <!-- Draw Count Indicator -->
             <div id="draw-count-indicator" class="hidden w-1/3 max-w-xs bg-red-800 bg-opacity-80 p-6 rounded-full shadow-lg text-center aspect-square flex flex-col justify-center items-center">
                 <span class="font-bold text-lg">DRAW</span>
                 <span id="draw-count-text" class="font-bold text-6xl text-yellow-300">0</span>
@@ -224,7 +224,7 @@
 
     </div>
 
-    <!-- ✅ STEP 5: Color Picker Modal -->
+    <!-- Color Picker Modal -->
     <div id="color-modal" class="hidden fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center">
         <div class="bg-white p-6 rounded-lg shadow-xl">
             <h3 class="text-black text-xl font-bold mb-4">Choose a Color</h3>
@@ -258,7 +258,6 @@
             onSnapshot,
             runTransaction,
             updateDoc,
-            // setLogLevel (Removed to avoid ad blocker confusion)
         } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // --- DOM Elements ---
@@ -278,8 +277,6 @@
         const discardPileEl = document.getElementById('discard-pile');
         const drawPileEl = document.getElementById('draw-pile');
         const messageContainer = document.getElementById('message-container');
-        
-        // --- ✅ STEP 5: New Game DOM Elements ---
         const colorModal = document.getElementById('color-modal');
         const drawCountIndicator = document.getElementById('draw-count-indicator');
         const drawCountText = document.getElementById('draw-count-text');
@@ -301,7 +298,7 @@
         let currentUserId = null;
         let currentGameId = null;
         let unsubscribeFromGame = null;
-        let localGameData = {}; // ✅ STEP 5: Local cache of game data
+        let localGameData = {}; 
 
         // --- Card Constants ---
         const COLORS = ['Red', 'Yellow', 'Green', 'Blue'];
@@ -332,7 +329,7 @@
                 startGameBtn.onclick = startGame;
                 leaveGameBtn.onclick = returnToLobby;
                 
-                // --- ✅ STEP 5: Attach game action listeners ---
+                // Attach game action listeners
                 drawPileEl.onclick = handleDrawCard;
                 colorModal.onclick = (e) => {
                     if (e.target.dataset.color) {
@@ -349,7 +346,7 @@
             }
         }
         
-        // --- New function to show on-screen errors ---
+        // --- On-screen error/message function ---
         function showMessage(text, duration = 4000) {
             messageContainer.innerHTML = ''; 
             const msgBox = document.createElement('div');
@@ -365,10 +362,9 @@
         }
         
         /**
-         * ✅ STEP 5: The One Master UI Function (Updated)
+         * The One Master UI Function
          */
         function renderUI(gameData) {
-            // Update local cache
             localGameData = gameData; 
 
             // Case 1: No game / In lobby
@@ -431,7 +427,6 @@
                 const myHand = gameData.playerHands[currentUserId] || [];
                 myHand.forEach((card, index) => {
                     const cardEl = createCardElement(card);
-                    // ✅ STEP 5: Add click listener to play card
                     if (isMyTurn && isValidPlay(card, topCard, gameData)) {
                         cardEl.onclick = () => handlePlayCard(index);
                     } else {
@@ -499,11 +494,11 @@
                     drawCountIndicator.classList.add('hidden');
                 }
             }
-            // ✅ STEP 5: Game is "finished"
+            // Game is "finished"
             else if (gameData.status === 'finished') {
                 console.log("Rendering UI: Game Finished");
-                lobbyScreen.classList.add('hidden'); // Keep lobby hidden
-                gameScreen.classList.remove('hidden'); // Keep game visible
+                lobbyScreen.classList.add('hidden'); 
+                gameScreen.classList.remove('hidden'); 
                 
                 const winnerIndex = gameData.players.indexOf(gameData.winner);
                 const winnerText = gameData.winner === currentUserId ? "You Win!" : `Player ${winnerIndex + 1} Wins!`;
@@ -565,12 +560,12 @@
             }, 
             (error) => { 
                 console.error("onSnapshot listener failed:", error);
-                showMessage("Connection to game failed. Please refresh. " + error.message);
+                showMessage("Connection to game failed: " + error.message);
             });
         }
 
 
-        // --- Button Functions (No change) ---
+        // --- Button Functions ---
 
         async function createGame() {
             if (!currentUserId) {
@@ -653,11 +648,13 @@
 
             if (!currentGameId) {
                 showMessage("Error: No game ID.");
+                startGameBtn.disabled = false;
                 return;
             }
             const gameRef = doc(getGameCollectionRef(), currentGameId);
 
             try {
+                // Get fresh data to check host status
                 const freshDoc = await getDoc(gameRef);
                 if (!freshDoc.exists()) throw new Error("Game not found.");
                 
@@ -692,14 +689,22 @@
                         chosenColor: firstCard.color,
                         currentPlayerUid: players[0],
                         turnDirection: 1,
-                        pendingDrawCount: 0, // ✅ STEP 5: Initialize draw count
+                        pendingDrawCount: 0,
                         gameLog: [
                             ...freshData.gameLog,
                             `Host started the game. Player 1's turn.`,
                         ],
                     });
                 });
+
                 console.log("Start game transaction successful!");
+                
+                // ✅ THE FINAL FIX: Manually switch the host's screen
+                // The onSnapshot listener will handle it for other players
+                console.log("Manually switching screen for host.");
+                lobbyScreen.classList.add('hidden');
+                gameScreen.classList.remove('hidden');
+            
             } catch (error) {
                 console.error("Error starting game:", error);
                 showMessage("Start Game failed: " + error.message);
@@ -745,7 +750,7 @@
             return newDeck;
         }
 
-        // --- ✅ STEP 5: All New Game Logic Functions ---
+        // --- Game Logic Functions ---
 
         /**
          * Checks if a card is valid to play
@@ -903,7 +908,7 @@
          * Handles the player clicking the draw pile
          */
         async function handleDrawCard() {
-            if (localGameData.currentPlayerUid !== currentUserId) return; // Not my turn
+            if (!localGameData.currentPlayerUid || localGameData.currentPlayerUid !== currentUserId) return; // Not my turn
 
             const gameRef = doc(getGameCollectionRef(), currentGameId);
 
@@ -954,6 +959,12 @@
                     }
                     
                     // --- Draw cards ---
+                    if (deck.length < numToDraw) {
+                        // Still not enough cards
+                        numToDraw = deck.length;
+                        gameLog.push(`Not enough cards! Drawing ${numToDraw}.`);
+                    }
+                    
                     const drawnCards = deck.splice(0, numToDraw);
                     playerHand.push(...drawnCards);
                     
