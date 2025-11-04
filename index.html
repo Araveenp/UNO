@@ -5,6 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Online UNO Game</title>
     <!-- Load Tailwind CSS for styling --><script src="https://cdn.tailwindcss.com"></script>
+    <!--
+      Load Tone.js for sound effects.
+      Audio will start on the first user click (e.g., "Create Game").
+    --><script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.7.77/Tone.js"></script>
     <style>
         body {
             font-family: 'Arial', sans-serif;
@@ -561,9 +565,6 @@
             startGameBtn.disabled = true;
             startGameBtn.textContent = "Starting...";
 
-            // Use local data just for the host check
-            const isHost = currentUserId === localGameData.players?.[0];
-
             if (!currentGameId) {
                 showMessage("Game not found.", 2000);
                 startGameBtn.disabled = false;
@@ -578,14 +579,21 @@
                 const freshDoc = await getDoc(gameRef);
                 if (!freshDoc.exists()) throw new Error("Game not found on server.");
                 const freshData = freshDoc.data();
-
+                
+                // ✅ FIXED: Check host status using the FRESH data
+                const isHost = currentUserId === freshData.players?.[0];
                 const enoughPlayers = freshData.players.length >= 2;
                 const statusOK = freshData.status === "waiting";
 
                 console.log("Start Game - Latest Data:", freshData);
 
                 if (!isHost || !enoughPlayers || !statusOK) {
-                    showMessage("You cannot start the game.", 2000);
+                    let errorMsg = "You cannot start the game.";
+                    if (!isHost) errorMsg = "Only the host can start the game.";
+                    if (!enoughPlayers) errorMsg = "Not enough players.";
+                    if (!statusOK) errorMsg = "Game is not in a waiting state.";
+                    
+                    showMessage(errorMsg, 2000);
                     startGameBtn.disabled = false;
                     startGameBtn.textContent = `Start Game (${freshData.players.length} Players)`;
                     return;
