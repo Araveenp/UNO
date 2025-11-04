@@ -204,7 +204,8 @@
                 console.log(`Game created with ID: ${gameId}`);
                 await subscribeToGame(gameId);
 
-            } catch (error) {
+            } catch (error)
+ {
                 console.error("Error creating game:", error);
                 lobbyInfo.textContent = "Failed to create game. Try again.";
             } finally {
@@ -286,6 +287,7 @@
                 }
                 
                 const gameData = doc.data();
+                console.log("onSnapshot received data. Status:", gameData.status); // <-- ADDED LOG
                 
                 // --- Update Lobby UI based on game data ---
                 if (gameData.status === 'waiting') {
@@ -319,8 +321,7 @@
                     }
                 } else if (gameData.status === 'active') {
                     // --- STEP 3: Game has started! Switch screens. ---
-                    // This will be called for all players *except* the host
-                    // (who is handled by the new fix below)
+                    // ✅ THIS IS NOW THE ONLY PLACE THE SCREEN SWITCHES.
                     if (lobbyScreen.classList.contains('hidden')) return; // Already in game
                     
                     console.log("Game is active! (Heard by listener) Switching to game screen...");
@@ -405,11 +406,9 @@
                     });
                 });
 
-                // ✅ NEW FIX: Transaction Succeeded! Manually switch the screen.
-                // We don't wait for onSnapshot, we *know* it's active.
-                console.log("Start game transaction successful! Manually switching screen for host.");
-                lobbyScreen.classList.add('hidden');
-                gameScreen.classList.remove('hidden');
+                // ✅ FIX: Removed the manual screen switch.
+                // The onSnapshot listener will now handle this reliably.
+                console.log("Start game transaction successful! onSnapshot will handle screen switch.");
             
             } catch (error) {
                 console.error("Error starting game:", error);
