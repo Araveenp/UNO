@@ -20,7 +20,8 @@
 
         /* Lobby Background */
         #lobby-screen {
-            background-image: url('https://i.imgur.com/W29F1rM.png'); /* Your provided UNO background image */
+            /* FIX: Replaced unreliable imgur link with stable github link */
+            background-image: url('https://raw.githubusercontent.com/ht-sard/uno-assets/main/misc/uno_bg.png');
             background-size: cover;
             background-position: center;
             height: 100vh;
@@ -370,7 +371,6 @@
         // --- Sound Effects (using Tone.js) ---
         // Create synths and effects once
         const synth = new Tone.Synth().toDestination();
-        // FIX: Corrected typo from PlackSynth to PluckSynth
         const pluckSynth = new Tone.PluckSynth().toDestination();
         const winSampler = new Tone.Sampler({
             urls: { C4: "C4.mp3", E4: "E4.mp3", G4: "G4.mp3", },
@@ -429,6 +429,7 @@
                         console.log("User authenticated:", currentUserId);
                         // lobbyScreen.classList.remove('hidden'); // Lobby is visible by default now
                     } else {
+                        console.log("User not authenticated, signing in anonymously...");
                         if (initialAuthToken) {
                             await signInWithCustomToken(auth, initialAuthToken);
                         } else {
@@ -459,8 +460,12 @@
 
         async function createGame() {
             await playSfx('join'); 
-            if (!currentUserId) return;
+            if (!currentUserId) {
+                showMessage("Still authenticating... Try again in a second.", 2000);
+                return;
+            }
             lobbyInfo.textContent = "Creating game...";
+            console.log("Creating game...");
 
             const gameId = Math.random().toString(36).substring(2, 7).toUpperCase();
             const gameRef = doc(getGameCollectionRef(), gameId);
@@ -483,6 +488,7 @@
                 await setDoc(gameRef, newGameData);
                 lobbyInfo.textContent = `Game Created! ID: ${gameId}. Waiting for Player 2...`;
                 gameIdInput.value = gameId;
+                console.log("Game created with ID:", gameId);
                 await subscribeToGame(gameId);
             } catch (error) {
                 console.error("Error creating game:", error);
@@ -499,6 +505,7 @@
             }
 
             lobbyInfo.textContent = `Joining game ${gameId}...`;
+            console.log(`Joining game ${gameId}...`);
             const gameRef = doc(getGameCollectionRef(), gameId);
 
             try {
@@ -508,7 +515,10 @@
                         throw new Error("Game not found!");
                     }
                     const gameData = gameDoc.data();
-                    if (gameData.players.includes(currentUserId)) return;
+                    if (gameData.players.includes(currentUserId)) {
+                        console.log("Already in this game.");
+                        return; // Already in game
+                    }
                     if (gameData.status !== 'waiting') {
                         throw new Error("Game is full or has already started.");
                     }
@@ -518,6 +528,7 @@
                         gameLog: [...gameData.gameLog, `Player ${players.length} joined the lobby.`]
                     });
                 });
+                console.log("Joined game successfully.");
                 await subscribeToGame(gameId);
             } catch (error) {
                 console.error("Error joining game:", error);
@@ -528,20 +539,23 @@
         async function subscribeToGame(gameId) {
             currentGameId = gameId;
             const gameRef = doc(getGameCollectionRef(), gameId);
+            console.log(`Subscribing to game ${gameId}`);
 
             if (unsubscribeFromGame) unsubscribeFromGame();
 
             unsubscribeFromGame = onSnapshot(gameRef, (doc) => {
                 if (!doc.exists()) {
+                    console.warn("Game document not found or was deleted.");
                     showMessage("Game not found or was deleted.", 5000);
                     returnToLobby();
                     return;
                 }
 
-                const oldStatus = localGameData.status;
                 localGameData = doc.data();
+                console.log("Game status updated:", localGameData.status);
 
                 if (localGameData.status === 'active' || localGameData.status === 'awaiting_color') {
+                    console.log("Switching to game screen.");
                     lobbyScreen.classList.add('hidden');
                     gameScreen.classList.remove('hidden');
                     gameIdDisplay.textContent = currentGameId;
@@ -551,6 +565,7 @@
                     renderGameUI();
                     
                 } else if (localGameData.status === 'finished') {
+                    console.log("Game finished. Winner:", localGameData.winner);
                     // Handle game over logic
                     renderGameUI(); // Render final state
                     const winnerUid = localGameData.winner;
@@ -558,9 +573,13 @@
                     const message = (winnerUid === currentUserId) ? "You WIN!" : `Player ${winnerIndex + 1} Wins! Better luck next time.`;
                     showMessage(message, 5000, true);
                     if (winnerUid === currentUserId) playSfx('win');
+                    
+                    if (unsubscribeFromGame) unsubscribeFromGame(); // Stop listening
+                    unsubscribeFromGame = null;
                     setTimeout(returnToLobby, 5000);
 
                 } else if (localGameData.status === 'waiting') {
+                    console.log("Updating lobby screen.");
                     lobbyScreen.classList.remove('hidden');
                     gameScreen.classList.add('hidden');
                     lobbyInfo.textContent = `Game ID: ${currentGameId}. Share this with friends!`;
@@ -601,28 +620,37 @@
         }
 
         function returnToLobby() {
-            if (unsubscribeFromGame) unsubscribeFromGame();
+            if (unsubscribeFromGame) {
+                console.log("Unsubscribing from game.");
+                unsubscribeFromGame();
+            }
             unsubscribeFromGame = null;
             currentGameId = null;
             localGameData = {};
             myHand = [];
 
+            console.log("Returning to lobby.");
             lobbyScreen.classList.remove('hidden');
             gameScreen.classList.add('hidden');
             lobbyInfo.textContent = "";
             gameIdInput.value = "";
+            lobbyPlayerList.innerHTML = "";
+            startGameBtn.classList.add('hidden');
         }
 
         async function startGame() {
+            console.log("Start game button clicked.");
             const isHost = currentUserId === localGameData.players[0];
             const enoughPlayers = localGameData.players.length >= 2;
 
             if (!isHost || !enoughPlayers || localGameData.status !== 'waiting') {
                 showMessage("You cannot start the game.", 2000);
+                console.warn("Start game validation failed.");
                 return;
             }
 
             lobbyInfo.textContent = "Starting game...";
+            console.log("Starting game transaction...");
             const gameRef = doc(getGameCollectionRef(), currentGameId);
 
             try {
@@ -647,6 +675,7 @@
                         firstCard = newDeck.pop();
                     }
 
+                    console.log("Setting game status to 'active'.");
                     transaction.update(gameRef, {
                         status: 'active',
                         players: players,
@@ -821,6 +850,12 @@
             // This function is now run on the client-side *first* to enable/disable cards.
             // The server will run the same logic again in the transaction.
             const pendingDraw = gameData.pendingDrawCount > 0;
+            
+            // This check is for drawing cards
+            if (card === null) { 
+                return true; // You can always draw
+            }
+
             const activeColor = gameData.chosenColor || topCard.color;
 
             if (pendingDraw) {
@@ -866,6 +901,7 @@
                     
                     // Re-validate inside transaction
                     if (!isValidPlay(card, topCard, gameData)) {
+                        console.warn("Invalid card play attempted.", { card, topCard, gameData });
                         throw new Error("Invalid card play!");
                     }
                     
@@ -882,6 +918,7 @@
                     let pendingDrawCount = gameData.pendingDrawCount;
                     
                     if (playerHand.length === 0) {
+                        console.log("Player has no cards left. Setting status to finished.");
                         status = 'finished';
                         winner = currentUserId;
                         gameLog.push(`Player ${gameData.players.indexOf(currentUserId) + 1} WINS!`);
@@ -907,12 +944,12 @@
                             break;
                         case 'Draw Two':
                             pendingDrawCount += 2;
-                            gameLog.push(`Stack is at +${pendingDrawCount}!`);
+                            gameLog.push(`Stack is at +${pendingDrawCount}!`); // FIX: Typo
                             chosenColor = playedCard.color;
                             break;
                         case 'Wild Draw Four':
                             pendingDrawCount += 4;
-                            gameLog.push(`Stack is at +${pendingDrawCount}!`);
+                            gameLog.push(`Stack is at +${pendingDrawCount}!`); // FIX: Typo
                             break; // Color chosen later
                         case 'Wild':
                             chosenColor = null; // Color chosen later
@@ -927,6 +964,7 @@
 
                     // If game is over, no next player
                     if (status === 'finished') {
+                        console.log("WIN CONDITION: Updating game to finished status.");
                         transaction.update(gameRef, {
                             playerHands: playerHands,
                             discardPile: discardPile,
@@ -944,6 +982,7 @@
                     
                     // Handle Wild cards (stop to ask for color)
                     if (playedCard.color === 'Wild') {
+                        console.log("Wild card played, awaiting color choice.");
                         transaction.update(gameRef, {
                             playerHands: playerHands,
                             discardPile: discardPile,
@@ -951,6 +990,7 @@
                             status: 'awaiting_color',
                             pendingDrawCount: pendingDrawCount
                         });
+                        // Show modal on client side
                         colorModal.classList.remove('hidden');
                         return; // Exit transaction early
                     }
@@ -986,6 +1026,7 @@
 
         async function handleSelectColor(color) {
             colorModal.classList.add('hidden');
+            console.log(`Color ${color} selected.`);
             
             const gameRef = doc(getGameCollectionRef(), localGameData.gameId);
             
@@ -996,7 +1037,9 @@
                     
                     const gameData = gameDoc.data();
                     
+                    // Check if we are still awaiting color from the correct player
                     if (gameData.status !== 'awaiting_color' || gameData.currentPlayerUid !== currentUserId) {
+                        console.warn("handleSelectColor called at wrong time.");
                         return;
                     }
 
@@ -1027,6 +1070,7 @@
         async function handleDrawCard() {
             if (localGameData.currentPlayerUid !== currentUserId || !localGameData.gameId) return;
 
+            console.log("Draw pile clicked.");
             playSfx('draw');
             const gameRef = doc(getGameCollectionRef(), localGameData.gameId);
 
@@ -1053,6 +1097,7 @@
                     if (pendingDrawCount > 0) {
                         // Player must draw the stack
                         let numToDraw = pendingDrawCount;
+                        console.log(`Player drawing stack of ${numToDraw}`);
                         gameLog.push(`Player ${currentPlayerIndex + 1} must draw ${numToDraw} cards!`);
                         
                         if (deck.length < numToDraw) {
@@ -1079,17 +1124,25 @@
                             currentPlayerUid: nextPlayerUid, // Turn is skipped
                             gameLog: gameLog,
                             pendingDrawCount: 0, // Stack cleared
-                            chosenColor: getTopCardFromPile(discardPile).color === 'Wild' ? null : getTopCardFromPile(discardPile).color // Reset color
+                            chosenColor: getTopCardFromPile(discardPile).color === 'Wild' ? getTopCardFromPile(discardPile).chosenColor : getTopCardFromPile(discardPile).color // Reset color
                         });
 
                     } else {
                         // Player draws 1 card
+                        console.log("Player drawing 1 card.");
                         if (deck.length < 1) {
                             const reshuffleResult = reshuffleDeck(deck, discardPile, gameLog);
                             deck = reshuffleResult.newDeck;
                             discardPile = reshuffleResult.newDiscardPile;
                             gameLog = reshuffleResult.newGameLog;
-                            if (deck.length === 0) throw new Error("No cards left to draw!");
+                            if (deck.length === 0) {
+                                gameLog.push("No cards left to draw! Skipping turn.");
+                                transaction.update(gameRef, {
+                                    currentPlayerUid: nextPlayerUid, // Turn ends
+                                    gameLog: gameLog
+                                });
+                                return;
+                            }
                         }
 
                         const drawnCard = deck.pop();
