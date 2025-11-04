@@ -184,10 +184,11 @@
             <!-- Player List --><div class="mt-6 w-full">
                 <h3 class="text-xl font-semibold mb-2">Players in Lobby:</h3>
                 <ul id="lobby-player-list" class="list-none bg-black bg-opacity-20 rounded-lg p-4 text-left min-h-[50px]">
-                    <!-- Player names will be dynamically inserted here --></ul>
+                    <!-- Player names will be dynamically inserted here -->
+                </ul>
             </div>
 
-            <!-- Host Controls --><div class="mt-6 w-full">
+            <!-- Start Game Button --><div class="mt-6 w-full">
                 <button id="start-game-btn" class="hidden w-full bg-yellow-500 hover:bg-yellow-600 text-gray-900 font-bold py-4 px-6 rounded-lg text-xl transition duration-200 transform hover:scale-105 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed">
                     Start Game
                 </button>
@@ -197,56 +198,61 @@
 
     <div id="game-screen" class="hidden">
         
-        <!-- Top Area: Opponents --><div class="w-full pt-4">
+        <!-- Opponent Area --><div class="w-full pt-4">
             <h2 class="text-center text-xl font-bold mb-2">Opponents' Cards (<span id="opponent-card-count">0</span>)</h2>
             <div id="opponent-hand">
-                <!-- Opponent's cards (face down) will be rendered here --></div>
+                <!-- Opponent's face-down cards will be rendered here -->
+            </div>
         </div>
 
-        <!-- Middle Area: Deck and Player List --><div class="flex-grow flex items-center justify-around w-full max-w-6xl mx-auto px-4">
+        <!-- Game Board Area --><div class="flex-grow flex items-center justify-around w-full max-w-6xl mx-auto px-4">
             
-            <!-- New Player List / Turn Order --><div id="player-list-container" class="w-1/3 max-w-xs bg-black bg-opacity-30 p-4 rounded-lg shadow-lg">
+            <!-- Player List --><div id="player-list-container" class="w-1/3 max-w-xs bg-black bg-opacity-30 p-4 rounded-lg shadow-lg">
                 <h3 class="text-center text-lg font-bold mb-3">Player Order</h3>
                 <div class="relative">
                     <div id="turn-highlight"></div>
                     <ol id="player-list" class="flex flex-col space-y-2">
-                        <!-- Player items will be rendered here --></ol>
+                        <!-- Player list items will be rendered here -->
+                    </ol>
                 </div>
             </div>
 
-            <!-- Game Area: Piles --><div class="flex items-center justify-center space-x-8">
+            <!-- Deck and Discard --><div class="flex items-center justify-center space-x-8">
                 <!-- Draw Pile --><div>
                     <div id="draw-pile" class="card">
-                        <!-- Card back image will be set here --></div>
+                        <!-- Card back will be rendered here -->
+                    </div>
                     <p class="text-center mt-2 font-semibold">Draw Pile</p>
                 </div>
                 
                 <!-- Discard Pile --><div>
                     <div id="discard-pile" class="card">
-                        <!-- Top card of discard pile shown here --></div>
+                        <!-- Top card of discard pile will be rendered here -->
+                    </div>
                     <p class="text-center mt-2 font-semibold">Discard Pile</p>
                 </div>
             </div>
             
-            <!-- Draw Count Indicator --><div id="draw-count-indicator" class="hidden w-1/3 max-w-xs bg-red-800 bg-opacity-80 p-6 rounded-full shadow-lg text-center aspect-square flex flex-col justify-center items-center">
+            <!-- Draw Stack Indicator --><div id="draw-count-indicator" class="hidden w-1/3 max-w-xs bg-red-800 bg-opacity-80 p-6 rounded-full shadow-lg text-center aspect-square flex flex-col justify-center items-center">
                 <span class="font-bold text-lg">DRAW</span>
                 <span id="draw-count-text" class="font-bold text-6xl text-yellow-300">0</span>
             </div>
 
         </div>
 
-        <!-- Bottom Area: Player's Hand --><div class="w-full">
+        <!-- Player Hand Area --><div class="w-full">
             <h2 class="text-center text-xl font-bold mt-2">Your Hand (<span id="player-card-count">7</span>)</h2>
             <div id="player-hand">
-                <!-- Player's cards will be rendered here --></div>
+                <!-- Player's cards will be rendered here -->
+            </div>
         </div>
         
-        <!-- Game Info (Hidden, for reference) --><div id="game-info" class="hidden text-center my-2">
+        <!-- Game ID Display (hidden by default) --><div id="game-info" class="hidden text-center my-2">
             <p>Game ID: <code id="game-id-display" class="bg-black bg-opacity-20 p-1 rounded"></code></p>
         </div>
     </div>
 
-    <!-- Color Picker Modal (Hidden by default) --><div id="color-modal" class="hidden fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50">
+    <!-- Color Picker Modal --><div id="color-modal" class="hidden fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50">
         <div class="bg-white p-6 rounded-lg shadow-xl">
             <h3 class="text-black text-xl font-bold mb-4">Choose a Color</h3>
             <div class="flex space-x-4">
@@ -258,9 +264,9 @@
         </div>
     </div>
 
-    <!-- Message Box (for game messages) --><div id="message-container"></div>
+    <!-- Message Container (for alerts/game over) --><div id="message-container"></div>
 
-    <!-- Firebase SDKs --><script type="module">
+    <script type="module">
         // --- Firebase Imports ---
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { 
@@ -302,6 +308,7 @@
         const drawCountText = document.getElementById('draw-count-text');
         
         // --- Firebase Config ---
+        // This config is public and safe to use.
         const firebaseConfig = {
           apiKey: "AIzaSyDIPxkUrfyMSzdddaBHHQ7hrhTMbTlOvao",
           authDomain: "uno-game-3e82a.firebaseapp.com",
@@ -311,26 +318,26 @@
           appId: "1:40853251329:web:c57964dcf70b8d3f4fe700",
           measurementId: "G-MBZTN7G8MC"
         };
-
+        
+        // We get the appId from the config.
         const appId = firebaseConfig.appId; 
-        const initialAuthToken = null; 
+        const initialAuthToken = null; // No auth token provided
 
         let app, auth, db;
         let currentUserId = null;
         let currentGameId = null;
-        let unsubscribeFromGame = null;
+        let unsubscribeFromGame = null; // Function to stop listening to game updates
+        let finishedGameReturnTimer = null; // Timer to prevent lobby bug
 
-        // --- FIX for 'stuck in lobby' bug ---
-        let returnToLobbyTimer = null; 
-
-        let localGameData = {};
-        let myHand = [];
+        let localGameData = {}; // Local cache of the game state
+        let myHand = []; // Local cache of the player's hand
         let isAudioEnabled = false; 
 
         // --- Card Images CDN ---
         const IMAGE_CDN_URL = "https://raw.githubusercontent.com/ht-sard/uno-assets/main/cards/";
 
         // --- Sound Effects (using Tone.js) ---
+        // Create synths and effects once
         const synth = new Tone.Synth().toDestination();
         const pluckSynth = new Tone.PluckSynth().toDestination();
         const winSampler = new Tone.Sampler({
@@ -339,15 +346,15 @@
         }).toDestination();
 
         const sounds = {
-            play: () => { 
+            play: () => { // "Swoosh" sound
                 synth.triggerAttackRelease("C5", "8n", Tone.now());
                 synth.frequency.rampTo("C6", "8n", Tone.now() + 0.05);
             },
-            draw: () => { 
+            draw: () => { // "Zip" sound
                 synth.triggerAttackRelease("A2", "16n", Tone.now());
                 synth.frequency.rampTo("E3", "16n", Tone.now() + 0.05);
             },
-            join: () => { 
+            join: () => { // "Bloop" sound
                 pluckSynth.triggerAttack("C4", Tone.now());
             },
             win: () => {
@@ -388,8 +395,9 @@
                     if (user) {
                         currentUserId = user.uid;
                         console.log("User authenticated:", currentUserId);
+                        lobbyScreen.classList.remove('hidden');
                     } else {
-                        console.log("User not authenticated, signing in anonymously...");
+                        // No user, sign in anonymously
                         if (initialAuthToken) {
                             await signInWithCustomToken(auth, initialAuthToken);
                         } else {
@@ -414,18 +422,24 @@
             startGameBtn.onclick = startGame;
         }
 
+        /**
+         * ✅ FIXED: This function now returns the correct, simple collection path.
+         */
         function getGameCollectionRef() {
-            return collection(db, `artifacts/${appId}/public/data/unoGames`);
+            return collection(db, "unoGames");
         }
 
         async function createGame() {
+            // Cancel any pending lobby-return timers to prevent bugs
+            if (finishedGameReturnTimer) clearTimeout(finishedGameReturnTimer);
+
             await playSfx('join'); 
-            if (!currentUserId) {
-                showMessage("Still authenticating... Try again in a second.", 2000);
-                return;
-            }
+            if (!currentUserId) return;
             lobbyInfo.textContent = "Creating game...";
-            console.log("Creating game...");
+
+            // Disable buttons to prevent double-clicks
+            createGameBtn.disabled = true;
+            joinGameBtn.disabled = true;
 
             const gameId = Math.random().toString(36).substring(2, 7).toUpperCase();
             const gameRef = doc(getGameCollectionRef(), gameId);
@@ -446,17 +460,24 @@
 
             try {
                 await setDoc(gameRef, newGameData);
-                lobbyInfo.textContent = `Game Created! ID: ${gameId}. Waiting for Player 2...`;
+                console.log(`Game created with ID: ${gameId}`);
+                lobbyInfo.textContent = `Game Created! ID: ${gameId}. Waiting for players...`;
                 gameIdInput.value = gameId;
-                console.log("Game created with ID:", gameId);
                 await subscribeToGame(gameId);
             } catch (error) {
                 console.error("Error creating game:", error);
                 lobbyInfo.textContent = "Failed to create game. Try again.";
+            } finally {
+                // Re-enable buttons
+                createGameBtn.disabled = false;
+                joinGameBtn.disabled = false;
             }
         }
 
         async function joinGame() {
+            // Cancel any pending lobby-return timers to prevent bugs
+            if (finishedGameReturnTimer) clearTimeout(finishedGameReturnTimer);
+
             await playSfx('join'); 
             const gameId = gameIdInput.value.trim().toUpperCase();
             if (!gameId || !currentUserId) {
@@ -465,7 +486,11 @@
             }
 
             lobbyInfo.textContent = `Joining game ${gameId}...`;
-            console.log(`Joining game ${gameId}...`);
+            
+            // Disable buttons
+            createGameBtn.disabled = true;
+            joinGameBtn.disabled = true;
+
             const gameRef = doc(getGameCollectionRef(), gameId);
 
             try {
@@ -476,8 +501,8 @@
                     }
                     const gameData = gameDoc.data();
                     if (gameData.players.includes(currentUserId)) {
-                        console.log("Already in this game.");
-                        return; // Already in game
+                        console.log("Already in this game, re-subscribing...");
+                        return; // Already in, just subscribe
                     }
                     if (gameData.status !== 'waiting') {
                         throw new Error("Game is full or has already started.");
@@ -488,80 +513,72 @@
                         gameLog: [...gameData.gameLog, `Player ${players.length} joined the lobby.`]
                     });
                 });
-                console.log("Joined game successfully.");
+                console.log(`Successfully joined game ${gameId}`);
                 await subscribeToGame(gameId);
             } catch (error) {
                 console.error("Error joining game:", error);
                 lobbyInfo.textContent = error.message;
+            } finally {
+                createGameBtn.disabled = false;
+                joinGameBtn.disabled = false;
             }
         }
 
         async function subscribeToGame(gameId) {
-            // --- FIX for 'stuck in lobby' bug ---
-            // Cancel any pending timers from a *previous* game
-            if (returnToLobbyTimer) {
-                clearTimeout(returnToLobbyTimer);
-                returnToLobbyTimer = null;
-                console.log("Cancelled pending lobby return timer.");
-            }
-            // --- END FIX ---
+            console.log(`Subscribing to game: ${gameId}`);
+            currentGameId = gameId;
+            const gameRef = doc(getGameCollectionRef(), gameId);
 
-            // Clean up *any* existing listener before starting a new one.
+            // Unsubscribe from any previous game
             if (unsubscribeFromGame) {
-                console.log("Cleaning up old game subscription.");
+                console.log("Unsubscribing from old game...");
                 unsubscribeFromGame();
                 unsubscribeFromGame = null;
             }
 
-            currentGameId = gameId;
-            const gameRef = doc(getGameCollectionRef(), gameId);
-            console.log(`Subscribing to game ${gameId}`);
-
             unsubscribeFromGame = onSnapshot(gameRef, (doc) => {
                 if (!doc.exists()) {
-                    console.warn("Game document not found or was deleted.");
                     showMessage("Game not found or was deleted.", 5000);
                     returnToLobby();
                     return;
                 }
 
+                const oldStatus = localGameData.status;
                 localGameData = doc.data();
-                console.log("Game status updated:", localGameData.status);
+                console.log("Game data snapshot received:", localGameData.status);
+
 
                 if (localGameData.status === 'active' || localGameData.status === 'awaiting_color') {
-                    console.log("Switching to game screen.");
-                    lobbyScreen.classList.add('hidden');
-                    gameScreen.classList.remove('hidden');
-                    gameIdDisplay.textContent = currentGameId;
-                    
-                    myHand = localGameData.playerHands[currentUserId] || [];
-                    
-                    renderGameUI();
+                    if (lobbyScreen.classList.contains('hidden')) {
+                        // Already in game, just update
+                        myHand = localGameData.playerHands[currentUserId] || [];
+                        renderGameUI();
+                    } else {
+                        // First time entering game
+                        console.log("Transitioning from lobby to game screen.");
+                        lobbyScreen.classList.add('hidden');
+                        gameScreen.classList.remove('hidden');
+                        gameIdDisplay.textContent = currentGameId;
+                        myHand = localGameData.playerHands[currentUserId] || [];
+                        renderGameUI();
+                    }
                     
                 } else if (localGameData.status === 'finished') {
-                    console.log("Game finished. Winner:", localGameData.winner);
+                    // Handle game over logic
                     renderGameUI(); // Render final state
                     const winnerUid = localGameData.winner;
                     const winnerIndex = localGameData.players.indexOf(winnerUid);
                     const message = (winnerUid === currentUserId) ? "You WIN!" : `Player ${winnerIndex + 1} Wins! Better luck next time.`;
+                    
                     showMessage(message, 5000, true);
                     if (winnerUid === currentUserId) playSfx('win');
                     
-                    if (unsubscribeFromGame) {
-                        console.log("Unsubscribing from finished game.");
-                        unsubscribeFromGame();
-                        unsubscribeFromGame = null;
-                    }
-
-                    // --- FIX for 'stuck in lobby' bug ---
-                    // Set the timer to return to lobby
-                    console.log("Setting timer to return to lobby.");
-                    returnToLobbyTimer = setTimeout(returnToLobby, 5000);
-                    // --- END FIX ---
-
+                    // Use a timer to return to lobby, preventing race conditions
+                    if (finishedGameReturnTimer) clearTimeout(finishedGameReturnTimer);
+                    finishedGameReturnTimer = setTimeout(returnToLobby, 5000);
 
                 } else if (localGameData.status === 'waiting') {
-                    console.log("Updating lobby screen.");
+                    // Ensure we are in the lobby
                     lobbyScreen.classList.remove('hidden');
                     gameScreen.classList.add('hidden');
                     lobbyInfo.textContent = `Game ID: ${currentGameId}. Share this with friends!`;
@@ -602,50 +619,46 @@
         }
 
         function returnToLobby() {
-            // --- FIX for 'stuck in lobby' bug ---
-            // Clear any pending timer, just in case.
-            if (returnToLobbyTimer) {
-                clearTimeout(returnToLobbyTimer);
-                returnToLobbyTimer = null;
+            if (unsubscribeFromGame) {
+                console.log("Unsubscribing from finished game and returning to lobby.");
+                unsubscribeFromGame();
+                unsubscribeFromGame = null;
             }
-            
-            // We NO LONGER call unsubscribeFromGame() here.
-            // This was the bug. Unsubscribing happens *only* when
-            // subscribing to a new game or when 'finished' is detected.
-            // --- END FIX ---
-            
             currentGameId = null;
             localGameData = {};
             myHand = [];
+            finishedGameReturnTimer = null; // Clear the timer
 
-            console.log("Returning to lobby.");
             lobbyScreen.classList.remove('hidden');
             gameScreen.classList.add('hidden');
             lobbyInfo.textContent = "";
             gameIdInput.value = "";
-            lobbyPlayerList.innerHTML = "";
             startGameBtn.classList.add('hidden');
+            lobbyPlayerList.innerHTML = '';
         }
 
         async function startGame() {
-            console.log("Start game button clicked.");
-            if (!localGameData || !localGameData.players) {
-                showMessage("Game data not loaded yet.", 2000);
-                console.warn("Start game validation failed: localGameData not loaded.");
-                return;
-            }
-            
+            // ✅ FIX: Disable button immediately to prevent double-clicks
+            startGameBtn.disabled = true;
+            startGameBtn.textContent = "Starting...";
+
             const isHost = currentUserId === localGameData.players[0];
             const enoughPlayers = localGameData.players.length >= 2;
 
+            // ✅ ADDED: Debugging logs
+            console.log("Start game button clicked.");
+            console.log("Local gameData before start:", localGameData);
+            console.log("Is host:", isHost, "Enough players:", enoughPlayers, "Status:", localGameData.status);
+
             if (!isHost || !enoughPlayers || localGameData.status !== 'waiting') {
                 showMessage("You cannot start the game.", 2000);
-                console.warn("Start game validation failed:", { isHost, enoughPlayers, status: localGameData.status });
+                // Re-enable button if start failed
+                startGameBtn.disabled = false;
+                startGameBtn.textContent = `Start Game (${localGameData.players.length} Players)`;
                 return;
             }
 
             lobbyInfo.textContent = "Starting game...";
-            console.log("Starting game transaction...");
             const gameRef = doc(getGameCollectionRef(), currentGameId);
 
             try {
@@ -654,12 +667,7 @@
                     if (!gameDoc.exists()) throw new Error("Game not found.");
                     
                     const gameData = gameDoc.data();
-                    if (gameData.status !== 'waiting') {
-                        // This can happen if another player joins/leaves right as host clicks start
-                        // Or if this is a double-click
-                        console.warn("Game status was not 'waiting' in transaction.");
-                        throw new Error("Game already started or lobby changed.");
-                    }
+                    if (gameData.status !== 'waiting') throw new Error("Game already started.");
 
                     const players = gameData.players;
                     const newDeck = createAndShuffleDeck();
@@ -669,13 +677,13 @@
                     });
 
                     let firstCard = newDeck.pop();
+                    // First card cannot be a special action card
                     while (WILD_VALUES.includes(firstCard.value) || ['Skip', 'Reverse', 'Draw Two'].includes(firstCard.value)) {
                         newDeck.push(firstCard);
-                        newDeck.sort(() => Math.random() - 0.5);
+                        newDeck.sort(() => Math.random() - 0.5); // Reshuffle
                         firstCard = newDeck.pop();
                     }
 
-                    console.log("Setting game status to 'active'.");
                     transaction.update(gameRef, {
                         status: 'active',
                         players: players,
@@ -687,10 +695,14 @@
                         gameLog: [...gameData.gameLog, `Host started the game with ${players.length} players. Player 1's turn.`]
                     });
                 });
+                console.log("Start game transaction successful!");
+                // No need to re-enable button, screen will change
             } catch (error) {
                 console.error("Error starting game:", error);
-                lobbyInfo.textContent = error.message;
-                showMessage(error.message, 3000);
+                showMessage("Start Game failed: " + error.message, 3000);
+                // Re-enable button if start failed
+                startGameBtn.disabled = false;
+                startGameBtn.textContent = `Start Game (${localGameData.players.length} Players)`;
             }
         }
 
@@ -706,6 +718,9 @@
             };
         }
 
+        /**
+         * New function to map card object to its image file name
+         */
         function getCardImageUrl(card, isFaceDown = false) {
             if (isFaceDown) {
                 return `${IMAGE_CDN_URL}card_back.png`;
@@ -726,6 +741,9 @@
             return `${IMAGE_CDN_URL}${color}_${value}.png`;
         }
 
+        /**
+         * Renders a single card element using <img>
+         */
         function renderCard(card, isFaceDown = false) {
             const cardEl = document.createElement('div');
             cardEl.className = 'card';
@@ -739,10 +757,7 @@
         }
 
         function renderGameUI() {
-            if (!localGameData.status || localGameData.status === 'waiting' || !localGameData.players) {
-                console.warn("RenderGameUI called with incomplete data.");
-                return;
-            }
+            if (!localGameData.status || localGameData.status === 'waiting') return;
 
             const isMyTurn = localGameData.currentPlayerUid === currentUserId;
             const topCard = getTopCard();
@@ -778,6 +793,7 @@
             discardPileEl.innerHTML = '';
             if (topCard) {
                 const topCardEl = renderCard(topCard);
+                // Highlight chosen color for Wild cards
                 if (topCard.color === 'Wild' && localGameData.chosenColor) {
                     topCardEl.style.boxShadow = `0 0 20px 8px ${localGameData.chosenColor.toLowerCase()}`;
                 }
@@ -787,7 +803,7 @@
             // Render Draw Pile
             drawPileEl.innerHTML = '';
             drawPileEl.appendChild(renderCard(null, true));
-            // You can always click the draw pile on your turn
+            // Enable/disable draw pile
             if (isMyTurn) {
                 drawPileEl.classList.remove('disabled');
             } else {
@@ -812,9 +828,7 @@
             });
             
             // Animate highlight
-            if(currentPlayerIndex >= 0) {
-                turnHighlightEl.style.transform = `translateY(${currentPlayerIndex * 44}px)`; // 44px is item height (p-3 + space-y-2)
-            }
+            turnHighlightEl.style.transform = `translateY(${currentPlayerIndex * 44}px)`; // 44px is item height (p-3 + space-y-2)
             
             // Animate direction
             if (localGameData.turnDirection === 1) {
@@ -846,18 +860,9 @@
         }
 
         function isValidPlay(card, topCard, gameData) {
+            // This function is run on the client-side *first* to enable/disable cards.
+            // The server will run the same logic again in the transaction.
             const pendingDraw = gameData.pendingDrawCount > 0;
-            
-            if (!topCard) {
-                console.warn("isValidPlay check failed: No top card.");
-                return false; // Should not happen after game start
-            }
-            
-            // This check is for drawing cards
-            if (card === null) { 
-                return true; // You can always draw
-            }
-
             const activeColor = gameData.chosenColor || topCard.color;
 
             if (pendingDraw) {
@@ -875,7 +880,7 @@
             // Standard play rules
             if (card.color === 'Wild') return true;
             if (card.color === activeColor) return true;
-            if (card.value === topCard.value) return true;
+            if (card.value === topCard.value) return true; 
             
             return false;
         }
@@ -901,12 +906,12 @@
                     
                     const topCard = gameData.discardPile[gameData.discardPile.length - 1];
                     
+                    // Re-validate inside transaction
                     if (!isValidPlay(card, topCard, gameData)) {
-                        console.warn("Invalid card play attempted.", { card, topCard, gameData });
                         throw new Error("Invalid card play!");
                     }
                     
-                    let playerHand = [...gameData.playerHands[currentUserId]]; // Make a copy
+                    let playerHand = gameData.playerHands[currentUserId];
                     const playedCard = playerHand.splice(cardIndex, 1)[0];
                     
                     let discardPile = [...gameData.discardPile];
@@ -918,8 +923,8 @@
                     let winner = null;
                     let pendingDrawCount = gameData.pendingDrawCount;
                     
+                    // ✅ WINNING GLITCH FIX: Check for win *before* asking for color
                     if (playerHand.length === 0) {
-                        console.log("Player has no cards left. Setting status to finished.");
                         status = 'finished';
                         winner = currentUserId;
                         gameLog.push(`Player ${gameData.players.indexOf(currentUserId) + 1} WINS!`);
@@ -945,12 +950,12 @@
                             break;
                         case 'Draw Two':
                             pendingDrawCount += 2;
-                            gameLog.push(`Stack is at +${pendingDrawCount}!`);
+                            gameLog.push(`Stack is now at +${pendingDrawCount}!`);
                             chosenColor = playedCard.color;
                             break;
                         case 'Wild Draw Four':
                             pendingDrawCount += 4;
-                            gameLog.push(`Stack is at +${pendingDrawCount}!`);
+                            gameLog.push(`Stack is now at +${pendingDrawCount}!`);
                             break; // Color chosen later
                         case 'Wild':
                             chosenColor = null; // Color chosen later
@@ -965,7 +970,6 @@
 
                     // If game is over, no next player
                     if (status === 'finished') {
-                        console.log("WIN CONDITION: Updating game to finished status.");
                         transaction.update(gameRef, {
                             playerHands: playerHands,
                             discardPile: discardPile,
@@ -983,7 +987,6 @@
                     
                     // Handle Wild cards (stop to ask for color)
                     if (playedCard.color === 'Wild') {
-                        console.log("Wild card played, awaiting color choice.");
                         transaction.update(gameRef, {
                             playerHands: playerHands,
                             discardPile: discardPile,
@@ -991,7 +994,6 @@
                             status: 'awaiting_color',
                             pendingDrawCount: pendingDrawCount
                         });
-                        // Show modal on client side
                         colorModal.classList.remove('hidden');
                         return; // Exit transaction early
                     }
@@ -1028,7 +1030,6 @@
 
         async function handleSelectColor(color) {
             colorModal.classList.add('hidden');
-            console.log(`Color ${color} selected.`);
             
             const gameRef = doc(getGameCollectionRef(), localGameData.gameId);
             
@@ -1039,8 +1040,8 @@
                     
                     const gameData = gameDoc.data();
                     
+                    // Prevent this from running if the game state has changed
                     if (gameData.status !== 'awaiting_color' || gameData.currentPlayerUid !== currentUserId) {
-                        console.warn("handleSelectColor called at wrong time.");
                         return;
                     }
 
@@ -1071,7 +1072,6 @@
         async function handleDrawCard() {
             if (localGameData.currentPlayerUid !== currentUserId || !localGameData.gameId) return;
 
-            console.log("Draw pile clicked.");
             playSfx('draw');
             const gameRef = doc(getGameCollectionRef(), localGameData.gameId);
 
@@ -1098,7 +1098,6 @@
                     if (pendingDrawCount > 0) {
                         // Player must draw the stack
                         let numToDraw = pendingDrawCount;
-                        console.log(`Player drawing stack of ${numToDraw}`);
                         gameLog.push(`Player ${currentPlayerIndex + 1} must draw ${numToDraw} cards!`);
                         
                         if (deck.length < numToDraw) {
@@ -1118,13 +1117,7 @@
                         
                         // Turn is skipped, stack is cleared
                         gameLog.push(`Player ${nextPlayerIndex + 1}'s turn.`);
-                        
                         const topCard = getTopCardFromPile(discardPile);
-                        let newChosenColor = topCard.color;
-                        if(topCard.color === 'Wild') {
-                            newChosenColor = gameData.chosenColor; // Keep the chosen color from the wild card
-                        }
-                        
                         transaction.update(gameRef, {
                             deck: deck,
                             discardPile: discardPile,
@@ -1132,25 +1125,17 @@
                             currentPlayerUid: nextPlayerUid, // Turn is skipped
                             gameLog: gameLog,
                             pendingDrawCount: 0, // Stack cleared
-                            chosenColor: newChosenColor 
+                            chosenColor: topCard.color === 'Wild' ? null : topCard.color // Reset color
                         });
 
                     } else {
                         // Player draws 1 card
-                        console.log("Player drawing 1 card.");
                         if (deck.length < 1) {
                             const reshuffleResult = reshuffleDeck(deck, discardPile, gameLog);
                             deck = reshuffleResult.newDeck;
                             discardPile = reshuffleResult.newDiscardPile;
                             gameLog = reshuffleResult.newGameLog;
-                            if (deck.length === 0) {
-                                gameLog.push("No cards left to draw! Skipping turn.");
-                                transaction.update(gameRef, {
-                                    currentPlayerUid: nextPlayerUid, // Turn ends
-                                    gameLog: gameLog
-                                });
-                                return;
-                            }
+                            if (deck.length === 0) throw new Error("No cards left to draw!");
                         }
 
                         const drawnCard = deck.pop();
@@ -1178,6 +1163,7 @@
 
         function createAndShuffleDeck() {
             let newDeck = [];
+            // Create colored cards
             for (const color of COLORS) {
                 newDeck.push({ color, value: '0' });
                 for (let i = 1; i <= 9; i++) {
@@ -1189,12 +1175,14 @@
                     newDeck.push({ color, value });
                 }
             }
+            // Create wild cards
             for (const value of WILD_VALUES) {
                 for (let i = 0; i < 4; i++) {
                     newDeck.push({ color: 'Wild', value });
                 }
             }
             
+            // Fisher-Yates Shuffle
             for (let i = newDeck.length - 1; i > 0; i--) {
                 const j = Math.floor(Math.random() * (i + 1));
                 [newDeck[i], newDeck[j]] = [newDeck[j], newDeck[i]];
@@ -1219,12 +1207,12 @@
                 return { newDeck: deck, newDiscardPile: discardPile, newGameLog: gameLog };
             }
 
-            const topCard = discardPile.pop();
+            const topCard = discardPile.pop(); // Keep the top card
             const cardsToShuffle = [...discardPile];
             cardsToShuffle.sort(() => Math.random() - 0.5);
 
             deck = [...deck, ...cardsToShuffle];
-            discardPile = [topCard];
+            discardPile = [topCard]; // Reset discard pile
             gameLog.push("Deck ran out and was reshuffled!");
 
             return { newDeck: deck, newDiscardPile: discardPile, newGameLog: gameLog };
@@ -1234,7 +1222,7 @@
         function showMessage(text, duration = 3000, isPermanent = false) {
             const container = document.getElementById('message-container');
             
-            // Clear existing non-permanent messages
+            // Clear old non-permanent messages
             document.querySelectorAll('.game-message').forEach(msg => msg.remove());
 
             const msgBox = document.createElement('div');
