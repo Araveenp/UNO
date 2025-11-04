@@ -426,7 +426,7 @@
          * ✅ FIXED: This function now returns the correct, simple collection path.
          */
         function getGameCollectionRef() {
-            console.log("Getting game collection ref: 'unoGames'"); // <-- ADDED THIS LINE
+            console.log("Getting game collection ref: 'unoGames'");
             return collection(db, "unoGames");
         }
 
@@ -638,37 +638,52 @@
             lobbyPlayerList.innerHTML = '';
         }
 
+        /**
+         * ✅ FIXED: This function now fetches the latest state from Firestore
+         * before validating, preventing race conditions.
+         */
         async function startGame() {
-            // ✅ FIX: Disable button immediately to prevent double-clicks
             startGameBtn.disabled = true;
             startGameBtn.textContent = "Starting...";
 
-            const isHost = currentUserId === localGameData.players[0];
-            const enoughPlayers = localGameData.players.length >= 2;
+            // Use local data just for the host check
+            const isHost = currentUserId === localGameData.players?.[0];
 
-            // ✅ ADDED: Debugging logs
-            console.log("Start game button clicked.");
-            console.log("Local gameData before start:", localGameData);
-            console.log("Is host:", isHost, "Enough players:", enoughPlayers, "Status:", localGameData.status);
-
-            if (!isHost || !enoughPlayers || localGameData.status !== 'waiting') {
-                showMessage("You cannot start the game.", 2000);
-                // Re-enable button if start failed
+            if (!currentGameId) {
+                showMessage("Game not found.", 2000);
                 startGameBtn.disabled = false;
-                startGameBtn.textContent = `Start Game (${localGameData.players.length} Players)`;
+                startGameBtn.textContent = "Start Game";
                 return;
             }
 
-            lobbyInfo.textContent = "Starting game...";
             const gameRef = doc(getGameCollectionRef(), currentGameId);
 
             try {
+                // ✅ Fetch latest data directly from Firestore before validating
+                const freshDoc = await getDoc(gameRef);
+                if (!freshDoc.exists()) throw new Error("Game not found on server.");
+                const freshData = freshDoc.data();
+
+                const enoughPlayers = freshData.players.length >= 2;
+                const statusOK = freshData.status === "waiting";
+
+                console.log("Start Game - Latest Data:", freshData);
+
+                if (!isHost || !enoughPlayers || !statusOK) {
+                    showMessage("You cannot start the game.", 2000);
+                    startGameBtn.disabled = false;
+                    startGameBtn.textContent = `Start Game (${freshData.players.length} Players)`;
+                    return;
+                }
+
+                lobbyInfo.textContent = "Starting game...";
+
                 await runTransaction(db, async (transaction) => {
+                    // Get the doc again *inside* the transaction
                     const gameDoc = await transaction.get(gameRef);
                     if (!gameDoc.exists()) throw new Error("Game not found.");
-                    
                     const gameData = gameDoc.data();
-                    if (gameData.status !== 'waiting') throw new Error("Game already started.");
+                    if (gameData.status !== "waiting") throw new Error("Game already started.");
 
                     const players = gameData.players;
                     const newDeck = createAndShuffleDeck();
@@ -679,31 +694,35 @@
 
                     let firstCard = newDeck.pop();
                     // First card cannot be a special action card
-                    while (WILD_VALUES.includes(firstCard.value) || ['Skip', 'Reverse', 'Draw Two'].includes(firstCard.value)) {
-                        newDeck.push(firstCard);
-                        newDeck.sort(() => Math.random() - 0.5); // Reshuffle
-                        firstCard = newDeck.pop();
+                    while (
+                        WILD_VALUES.includes(firstCard.value) ||
+                        ["Skip", "Reverse", "Draw Two"].includes(firstCard.value)
+                    ) {
+                        newDeck.unshift(firstCard); // Put it back at the bottom
+                        firstCard = newDeck.pop(); // Get a new one from the top
                     }
 
                     transaction.update(gameRef, {
-                        status: 'active',
+                        status: "active",
                         players: players,
                         deck: newDeck,
                         playerHands: playerHands,
                         discardPile: [firstCard],
                         chosenColor: firstCard.color,
                         currentPlayerUid: players[0],
-                        gameLog: [...gameData.gameLog, `Host started the game with ${players.length} players. Player 1's turn.`]
+                        gameLog: [
+                            ...gameData.gameLog,
+                            `Host started the game with ${players.length} players. Player 1's turn.`,
+                        ],
                     });
                 });
-                console.log("Start game transaction successful!");
-                // No need to re-enable button, screen will change
+
+                console.log("✅ Start game transaction successful!");
             } catch (error) {
                 console.error("Error starting game:", error);
                 showMessage("Start Game failed: " + error.message, 3000);
-                // Re-enable button if start failed
                 startGameBtn.disabled = false;
-                startGameBtn.textContent = `Start Game (${localGameData.players.length} Players)`;
+                startGameBtn.textContent = "Start Game";
             }
         }
 
