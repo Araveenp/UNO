@@ -35,68 +35,43 @@
             background: radial-gradient(circle, #0a8f44 0%, #043a1b 100%);
             height: 100vh;
             width: 100vw;
-            display: flex; 
+            display: flex; /* Keep display:flex for centering */
             flex-direction: column;
             align-items: center;
             justify-content: space-between; /* Space for hands and board */
             padding: 10px;
         }
 
-        /* Card Styling */
+        /* ✅ SIMPLIFIED Card Styling */
         .card {
             width: 80px;
             height: 120px;
             border-radius: 8px;
-            background-color: #1a202c;
             border: 2px solid white;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.5rem;
+            font-size: 1.25rem; /* Smaller text */
             font-weight: bold;
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
             position: relative;
             cursor: pointer;
-            transition: all 0.2s ease;
+            padding: 4px;
+            text-align: center;
+            word-break: break-word;
         }
         
-        /* Card hover effect */
-        #player-hand .card:hover {
-            transform: translateY(-10px) scale(1.05);
-            z-index: 10;
-        }
-
         .card.disabled {
             opacity: 0.6;
             cursor: not-allowed;
-            background-color: #4A5568; /* Gray */
-            color: #A0AEC0;
         }
         
-        .card.disabled:hover {
-            transform: none;
-        }
-
+        /* Simple colors */
         .card.red { background-color: #EF4444; }
         .card.yellow { background-color: #F59E0B; }
         .card.green { background-color: #10B981; }
         .card.blue { background-color: #3B82F6; }
-        .card.wild { background-color: #1F2937; } /* Dark for Wild */
-
-        /* Card color swatch for Wild */
-        .color-swatch {
-            width: 100%;
-            height: 100%;
-            border-radius: 6px;
-            opacity: 0.8;
-            box-shadow: 0 0 15px 5px #fff; /* Glow effect */
-        }
-        
-        .color-swatch.red { background-color: #EF4444; }
-        .color-swatch.yellow { background-color: #F59E0B; }
-        .color-swatch.green { background-color: #10B981; }
-        .color-swatch.blue { background-color: #3B82F6; }
-
+        .card.wild { background-color: #1F2937; }
 
         /* Message Box Styling */
         .message-box {
@@ -307,10 +282,8 @@
 
         // --- Main Initialization ---
         async function init() {
-            // ✅ TEST 1: This alert proves you have the new code.
-            // If you don't see this, you MUST do a hard refresh (Ctrl+Shift+R).
-            alert("This is the NEWEST version of the code. If you see this, the cache is clear.");
-
+            // Removed the debug alert
+            console.log("Initializing app...");
             try {
                 app = initializeApp(firebaseConfig);
                 db = getFirestore(app);
@@ -346,14 +319,17 @@
 
             } catch (error) {
                 console.error("Firebase Init Error:", error);
-                // ✅ TEST 2: Alert if Firebase fails to even initialize.
-                alert("Firebase Init Error: " + error.message);
                 showMessage("Firebase Init Error: " + error.message);
             }
         }
         
         // --- On-screen error/message function ---
         function showMessage(text, duration = 4000) {
+            // Re-instating the simple pop-up alert for errors
+            // This is *not* a good UI, but it *will* stop the game
+            // and tell us exactly what is wrong.
+            alert(text); 
+            
             messageContainer.innerHTML = ''; 
             const msgBox = document.createElement('div');
             msgBox.className = 'message-box';
@@ -368,7 +344,8 @@
         }
         
         /**
-         * The One Master UI Function
+         * ✅ THE ONE MASTER UI FUNCTION
+         * This is the ONLY function that shows/hides elements.
          */
         function renderUI(gameData) {
             localGameData = gameData; 
@@ -378,6 +355,7 @@
                 console.log("Rendering UI: Lobby (No Game)");
                 lobbyScreen.classList.remove('hidden');
                 gameScreen.classList.add('hidden');
+                
                 lobbyInfo.textContent = "";
                 gameIdInput.value = "";
                 lobbyPlayersContainer.classList.add('hidden');
@@ -390,8 +368,10 @@
                 console.log("Rendering UI: Lobby (Waiting)");
                 lobbyScreen.classList.remove('hidden');
                 gameScreen.classList.add('hidden');
+                
                 lobbyInfo.textContent = `Game ID: ${gameData.gameId}. Share this code!`;
                 gameIdInput.value = gameData.gameId;
+                
                 lobbyPlayersContainer.classList.remove('hidden');
                 lobbyPlayerList.innerHTML = ''; 
                 
@@ -425,6 +405,7 @@
                 lobbyScreen.classList.add('hidden');
                 gameScreen.classList.remove('hidden');
                 
+                // --- SIMPLIFIED GAME RENDER ---
                 const isMyTurn = gameData.currentPlayerUid === currentUserId;
                 const topCard = gameData.discardPile[gameData.discardPile.length - 1];
                 
@@ -441,12 +422,13 @@
                     playerHandEl.appendChild(cardEl);
                 });
 
-                // Render opponent hands
+                // Render opponent hands (simple)
                 opponentHandsEl.innerHTML = '';
                 playerListEl.innerHTML = ''; 
                 const currentPlayerIndex = gameData.players.indexOf(gameData.currentPlayerUid);
 
                 gameData.players.forEach((playerId, index) => {
+                    // Add to player list
                     const li = document.createElement('li');
                     li.className = "p-2 rounded-md text-gray-200 font-semibold";
                     let text = `Player ${index + 1}`;
@@ -457,18 +439,10 @@
                     li.textContent = text;
                     playerListEl.appendChild(li);
 
+                    // Render opponent hands (simple)
                     if (playerId !== currentUserId) {
                         const opponentCardCount = gameData.playerHands[playerId]?.length || 0;
-                        const opponentHandContainer = document.createElement('div');
-                        opponentHandContainer.className = "text-center";
-                        opponentHandContainer.innerHTML = `<p>Player ${index + 1} (${opponentCardCount} cards)</p>`;
-                        const cardsContainer = document.createElement('div');
-                        cardsContainer.className = "flex justify-center gap-1 mt-1";
-                        for (let i = 0; i < opponentCardCount; i++) {
-                            cardsContainer.appendChild(createCardElement(null, true));
-                        }
-                        opponentHandContainer.appendChild(cardsContainer);
-                        opponentHandsEl.appendChild(opponentHandContainer);
+                        opponentHandsEl.innerHTML += `<p>Player ${index + 1} has ${opponentCardCount} cards</p>`;
                     }
                 });
 
@@ -477,10 +451,7 @@
                 if (topCard) {
                     const topCardEl = createCardElement(topCard);
                     if (topCard.color === 'Wild' && gameData.chosenColor) {
-                        const swatch = document.createElement('div');
-                        swatch.className = `color-swatch ${gameData.chosenColor.toLowerCase()}`;
-                        topCardEl.innerHTML = '';
-                        topCardEl.appendChild(swatch);
+                        topCardEl.style.backgroundColor = gameData.chosenColor.toLowerCase();
                     }
                     discardPileEl.appendChild(topCardEl);
                 }
@@ -516,7 +487,7 @@
             }
         }
         
-        // --- Card Element Helper ---
+        // --- ✅ SIMPLIFIED Card Element Helper ---
         function createCardElement(card, isFaceDown = false) {
             const cardEl = document.createElement('div');
             cardEl.className = 'card';
@@ -525,20 +496,14 @@
                 cardEl.textContent = 'UNO';
             } else {
                 cardEl.classList.add(card.color.toLowerCase());
-                let value = card.value;
-                if (value === 'Draw Two') value = '+2';
-                if (value === 'Wild Draw Four') value = '+4';
-                if (value === 'Wild') value = 'W';
-                if (value === 'Skip') value = 'S';
-                if (value === 'Reverse') value = 'R';
-                cardEl.textContent = value;
+                cardEl.textContent = `${card.color} ${card.value}`;
             }
             return cardEl;
         }
 
 
         /**
-         * Attaches the ONE reliable listener
+         * ✅ THE ONE RELIABLE LISTENER
          */
         async function attachGameListener(gameId) {
             currentGameId = gameId;
@@ -566,8 +531,6 @@
             }, 
             (error) => { 
                 console.error("onSnapshot listener failed:", error);
-                // ✅ TEST 3: Alert if the listener itself breaks
-                alert("Connection to game failed: " + error.message);
                 showMessage("Connection to game failed: " + error.message);
             });
         }
@@ -601,8 +564,6 @@
                 await attachGameListener(gameId);
             } catch (error) {
                 console.error("Error creating game:", error);
-                // ✅ TEST 4: Alert if creating fails
-                alert("Error creating game: " + error.message);
                 showMessage("Error creating game: " + error.message);
             } finally {
                 createGameBtn.disabled = false;
@@ -646,8 +607,6 @@
                 await attachGameListener(gameId);
             } catch (error) {
                 console.error("Error joining game:", error);
-                // ✅ TEST 5: Alert if joining fails
-                alert("Error joining game: " + error.message);
                 showMessage("Error joining game: " + error.message);
             } finally {
                 joinGameBtn.disabled = false;
@@ -660,7 +619,6 @@
 
             if (!currentGameId) {
                 showMessage("Error: No game ID.");
-                startGameBtn.disabled = false;
                 return;
             }
             const gameRef = doc(getGameCollectionRef(), currentGameId);
@@ -710,19 +668,12 @@
                 });
 
                 console.log("Start game transaction successful!");
-                
-                // ✅ THE FINAL FIX: Manually switch the host's screen
-                console.log("Manually switching screen for host.");
-                lobbyScreen.classList.add('hidden');
-                gameScreen.classList.remove('hidden');
-                
-                // ✅ TEST 6: Alert to prove this code ran
-                alert("Host screen switch complete!");
+                // ✅ NO MANUAL SWITCH. The onSnapshot listener will
+                // see "status: active" and call renderUI.
+                // This is the simple, correct, race-condition-free way.
             
             } catch (error) {
                 console.error("Error starting game:", error);
-                // ✅ TEST 7: Alert if starting fails
-                alert("Start Game failed: " + error.message);
                 showMessage("Start Game failed: " + error.message);
                 startGameBtn.disabled = false;
                 startGameBtn.textContent = "Start Game";
