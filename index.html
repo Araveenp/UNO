@@ -17,13 +17,12 @@
 
         /* Lobby Background */
         #lobby-screen {
-            /* Background image from your screenshot */
+            /* ✅ NEW: Stable background image */
             background-image: url('https://i.imgur.com/W29F1rM.png');
             background-size: cover;
             background-position: center;
             height: 100vh;
             width: 100vw;
-            /* ✅ FIX: Removed display:flex. It's now in the HTML class. */
             flex-direction: column;
             align-items: center;
             justify-content: center;
@@ -47,7 +46,6 @@
             background: radial-gradient(circle, #0a8f44 0%, #043a1b 100%);
             height: 100vh;
             width: 100vw;
-            /* ✅ FIX: Removed display:flex. It's now in the HTML class. */
             flex-direction: column;
             align-items: center;
             justify-content: space-between; /* Space for hands and board */
@@ -242,7 +240,7 @@
                 <!-- Draw Pile -->
                 <div>
                     <div id="draw-pile" class="card">
-                        <img src="https://raw.githubusercontent.com/ht-sard/uno-assets/main/cards/card_back.png" alt="Draw Pile">
+                        <!-- Card back image will be loaded here -->
                     </div>
                     <p class="text-center mt-2 font-semibold">Draw Pile</p>
                 </div>
@@ -335,8 +333,6 @@
         const colorModal = document.getElementById('color-modal');
         const drawCountIndicator = document.getElementById('draw-count-indicator');
         const drawCountText = document.getElementById('draw-count-text');
-        
-        // --- New UI Elements ---
         const playerListContainer = document.getElementById('player-list-container');
         const turnHighlightEl = document.getElementById('turn-highlight');
 
@@ -364,10 +360,16 @@
         const COLORS = ['Red', 'Yellow', 'Green', 'Blue'];
         const VALUES = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'Skip', 'Reverse', 'Draw Two'];
         const WILD_VALUES = ['Wild', 'Wild Draw Four'];
-        const IMAGE_CDN_URL = "https://raw.githubusercontent.com/ht-sard/uno-assets/main/cards/";
+        
+        // ✅ NEW: Stable Image CDN
+        const IMAGE_CDN_URL = "https://gveg.github.io/uno-clone/cards/";
 
-        // --- Sound Effects ---
-        const synth = new Tone.Synth().toDestination();
+        // ✅ NEW: More realistic sounds
+        const noiseSynth = new Tone.NoiseSynth({
+            noise: { type: 'white' },
+            envelope: { attack: 0.001, decay: 0.1, sustain: 0 }
+        }).toDestination();
+        
         const pluckSynth = new Tone.PluckSynth().toDestination();
         const winSampler = new Tone.Sampler({
             urls: { C4: "C4.mp3", E4: "E4.mp3", G4: "G4.mp3", },
@@ -375,8 +377,8 @@
         }).toDestination();
 
         const sounds = {
-            play: () => { synth.triggerAttackRelease("C5", "8n", Tone.now()); synth.frequency.rampTo("C6", "8n", Tone.now() + 0.05); },
-            draw: () => { synth.triggerAttackRelease("A2", "16n", Tone.now()); synth.frequency.rampTo("E3", "16n", Tone.now() + 0.05); },
+            play: () => { noiseSynth.triggerAttackRelease("8n", Tone.now()); },
+            draw: () => { pluckSynth.triggerAttack("C3", Tone.now()); },
             join: () => { pluckSynth.triggerAttack("C4", Tone.now()); },
             win: () => { winSampler.triggerAttackRelease(["C4", "E4", "G4"], "4n", Tone.now()); }
         };
@@ -581,6 +583,8 @@
                 }
                 
                 // Render Draw Pile
+                drawPileEl.innerHTML = ''; // Clear text
+                drawPileEl.appendChild(createCardElement(null, true)); // Show card back
                 if (isMyTurn) {
                     drawPileEl.classList.remove('disabled');
                 } else {
@@ -612,20 +616,24 @@
             }
         }
         
-        // --- Card Element Helper ---
+        // --- ✅ NEW: Card Image URL Helper ---
         function getCardImageUrl(card, isFaceDown = false) {
             if (isFaceDown) {
                 return `${IMAGE_CDN_URL}card_back.png`;
             }
+
             let color = card.color.toLowerCase();
             let value = card.value.toLowerCase();
             
             if (color === 'wild') {
                 if (value === 'wild') return `${IMAGE_CDN_URL}wild_wild.png`;
-                if (value === 'wild draw four') return `${IMAGE_CDN_URL}wild_draw4.png`;
+                if (value === 'wild draw four') return `${IMAGE_CDN_URL}wild_draw_4.png`;
             }
-            if (value === 'draw two') value = 'draw2';
-            
+
+            if (value === 'draw two') value = 'draw_2';
+            if (value === 'reverse') value = 'reverse';
+            if (value === 'skip') value = 'skip';
+
             return `${IMAGE_CDN_URL}${color}_${value}.png`;
         }
         
@@ -891,7 +899,6 @@
         async function handlePlayCard(cardIndex) {
             if (localGameData.currentPlayerUid !== currentUserId) return; // Not my turn
             
-            playSfx('play');
             const card = localGameData.playerHands[currentUserId][cardIndex];
             const gameRef = doc(getGameCollectionRef(), currentGameId);
 
@@ -911,6 +918,7 @@
                     }
                     
                     // --- Card is valid, update game state ---
+                    playSfx('play'); // Play sound on success
                     let playerHand = [...gameData.playerHands[currentUserId]];
                     const playedCard = playerHand.splice(cardIndex, 1)[0];
                     
@@ -1019,7 +1027,6 @@
         async function handleDrawCard() {
             if (!localGameData.currentPlayerUid || localGameData.currentPlayerUid !== currentUserId) return; // Not my turn
 
-            playSfx('draw');
             const gameRef = doc(getGameCollectionRef(), currentGameId);
 
             try {
@@ -1030,6 +1037,7 @@
                     const gameData = gameDoc.data();
                     if(gameData.currentPlayerUid !== currentUserId) throw new Error("Not your turn!");
 
+                    playSfx('draw'); // Play sound on success
                     let deck = [...gameData.deck];
                     let discardPile = [...gameData.discardPile];
                     let playerHand = [...gameData.playerHands[currentUserId]];
