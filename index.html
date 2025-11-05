@@ -17,6 +17,7 @@
 
         /* Lobby Background */
         #lobby-screen {
+            /* ✅ Points to your GitHub repo */
             background-image: url('https://raw.githubusercontent.com/Araveenp/UNO/main/lobby_background.png');
             background-size: cover;
             background-position: center;
@@ -530,12 +531,12 @@
         
         // --- ✅ FIXED: Card Image URL Helper ---
         function getCardImageUrl(card, isFaceDown = false) {
-            // ✅ NEW: This is the local path.
-            // Assumes you have a folder named 'cards' in your project.
+            // ✅ NEW: This points to your GitHub repo's "cards" folder
             const IMAGE_BASE_PATH = "https://raw.githubusercontent.com/Araveenp/UNO/main/cards/";
 
             if (isFaceDown) {
                 // This is the card back image you provided
+                // PLEASE MAKE SURE you have 'card_back.png' in your folder
                 return `${IMAGE_BASE_PATH}card_back.png`;
             }
             
@@ -543,10 +544,10 @@
             let color = card.color.charAt(0).toUpperCase() + card.color.slice(1);
             let value = card.value; // Value is already capitalized
 
-            // Naming scheme from your 'image_185feb.png' screenshot
+            // ✅ FIX: Naming scheme from your 'image_185feb.png' screenshot
             if (color === 'Wild') {
-                if (value === 'Wild') return `${IMAGE_BASE_PATH}Wild_Color_Changer.png`; 
-                if (value === 'Wild Draw Four') return `${IMAGE_BASE_PATH}Wild_Draw_4.png`;
+                if (value === 'Wild') return `${IMAGE_BASE_PATH}Wild_Card_Change_Colour.png`; 
+                if (value === 'Wild Draw Four') return `${IMAGE_BASE_PATH}Wild_Card_Draw_4.png`;
             }
 
             if (value === 'Draw Two') value = 'Draw_2';
