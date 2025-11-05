@@ -17,7 +17,6 @@
 
         /* Lobby Background */
         #lobby-screen {
-            /* ✅ NEW: Points to your GitHub repo */
             background-image: url('https://raw.githubusercontent.com/Araveenp/UNO/main/lobby_background.png');
             background-size: cover;
             background-position: center;
@@ -72,7 +71,7 @@
             border-radius: 6px;
         }
         
-        /* ✅ REVERTED to simple grid layout */
+        /* REVERTED to simple grid layout */
         #player-hand {
             display: flex;
             justify-content: center;
@@ -182,7 +181,7 @@
         <div class="flex-grow flex items-center justify-around w-full max-w-6xl mx-auto px-4">
             
             <!-- Player List & Info -->
-            <div id="player-list-container" class="w-1/3 max-w-xs bg-black bg-opacity-30 p-4 rounded-lg shadow-lg">
+            <div id="player-list-container" class="w-1img/3 max-w-xs bg-black bg-opacity-30 p-4 rounded-lg shadow-lg">
                 <h3 class="text-center text-lg font-bold mb-3">Player Order</h3>
                 <ol id="player-list" class="flex flex-col space-y-2">
                     <!-- Player list items will be rendered here -->
@@ -539,19 +538,20 @@
                 // This is the card back image you provided
                 return `${IMAGE_BASE_PATH}card_back.png`;
             }
-
-            let color = card.color.toLowerCase();
-            let value = card.value.toLowerCase();
             
-            // Naming scheme from the repo you found
-            if (color === 'wild') {
-                if (value === 'wild') return `${IMAGE_BASE_PATH}wild_color_picker.png`; 
-                if (value === 'wild draw four') return `${IMAGE_BASE_PATH}wild_plus_4.png`;
+            // ✅ FIX: Capitalize first letter of color
+            let color = card.color.charAt(0).toUpperCase() + card.color.slice(1);
+            let value = card.value; // Value is already capitalized
+
+            // Naming scheme from your 'image_185feb.png' screenshot
+            if (color === 'Wild') {
+                if (value === 'Wild') return `${IMAGE_BASE_PATH}Wild_Color_Changer.png`; 
+                if (value === 'Wild Draw Four') return `${IMAGE_BASE_PATH}Wild_Draw_4.png`;
             }
 
-            if (value === 'draw two') value = 'plus_2';
-            if (value === 'reverse') value = 'reverse';
-            if (value === 'skip') value = 'picker'; 
+            if (value === 'Draw Two') value = 'Draw_2';
+            if (value === 'Reverse') value = 'Reverse';
+            if (value === 'Skip') value = 'Skip'; 
 
             // Handle numbers
             if (!isNaN(value)) {
