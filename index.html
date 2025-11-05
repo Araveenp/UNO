@@ -17,8 +17,8 @@
 
         /* Lobby Background */
         #lobby-screen {
-            /* ✅ NEW: Points to a local file */
-            background-image: url('lobby_background.png');
+            /* ✅ NEW: Points to your GitHub repo */
+            background-image: url('https://raw.githubusercontent.com/Araveenp/UNO/main/lobby_background.png');
             background-size: cover;
             background-position: center;
             height: 100vh;
@@ -533,7 +533,7 @@
         function getCardImageUrl(card, isFaceDown = false) {
             // ✅ NEW: This is the local path.
             // Assumes you have a folder named 'cards' in your project.
-            const IMAGE_BASE_PATH = "cards/";
+            const IMAGE_BASE_PATH = "https://raw.githubusercontent.com/Araveenp/UNO/main/cards/";
 
             if (isFaceDown) {
                 // This is the card back image you provided
