@@ -4,22 +4,21 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Online UNO Game</title>
-    <!-- Load Tailwind CSS for styling --><script src="https://cdn.tailwindcss.com"></script>
-    <!-- Removed Tone.js (sound) -->
+    <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body {
-            font-family: 'Arial', sans-serif;
+            font-family: 'Poppins', 'Segoe UI', sans-serif;
             margin: 0;
             padding: 0;
             color: #fff;
-            overflow: hidden; /* Prevent scrolling */
+            overflow: hidden;
         }
 
-        /* Lobby Background */
+        /* Lobby Background with animated gradient */
         #lobby-screen {
-            background-image: url('lobby_background.png');
-            background-size: cover;
-            background-position: center;
+            background: linear-gradient(-45deg, #ee7752, #e73c7e, #23a6d5, #23d5ab);
+            background-size: 400% 400%;
+            animation: gradientShift 15s ease infinite;
             height: 100vh;
             width: 100vw;
             flex-direction: column;
@@ -30,49 +29,75 @@
             padding: 20px;
         }
         
-        /* Dark overlay for lobby text readability */
+        @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        
         #lobby-screen::before {
             content: '';
             position: absolute;
             top: 0; left: 0; right: 0; bottom: 0;
-            background-color: rgba(0,0,0,0.6);
+            background-color: rgba(0,0,0,0.4);
             z-index: -1;
+            backdrop-filter: blur(3px);
         }
 
-        /* Game Screen Background (felt table) */
+        /* Game Screen Background */
         #game-screen {
             background-color: #054b23;
-            background: radial-gradient(circle, #0a8f44 0%, #043a1b 100%);
+            background: 
+                radial-gradient(circle at 20% 30%, rgba(255,255,255,0.05) 0%, transparent 50%),
+                radial-gradient(circle at 80% 70%, rgba(255,255,255,0.05) 0%, transparent 50%),
+                radial-gradient(circle, #0a8f44 0%, #043a1b 100%);
             height: 100vh;
             width: 100vw;
             flex-direction: column;
             align-items: center;
-            justify-content: space-between; /* Space for hands and board */
+            justify-content: space-between;
             padding: 10px;
-            position: relative; /* Needed for the turn indicator */
+            position: relative;
         }
 
-        /* Card Styling */
+        /* Card Styling with enhanced effects */
         .card {
             width: 90px;
             height: 135px;
-            border-radius: 8px;
-            background-color: transparent; /* Transparent background */
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+            border-radius: 12px;
+            background-color: transparent;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
             position: relative;
             cursor: pointer;
-            transition: all 0.2s ease;
-            overflow: hidden; /* Hide img overflow */
+            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            overflow: hidden;
+            transform-style: preserve-3d;
+        }
+        
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, transparent 50%);
+            opacity: 0;
+            transition: opacity 0.3s;
+            border-radius: 12px;
+            pointer-events: none;
+        }
+        
+        .card:hover::before {
+            opacity: 1;
         }
         
         .card img {
             width: 100%;
             height: 100%;
-            object-fit: contain; /* Use contain to keep aspect ratio */
-            border-radius: 6px;
+            object-fit: contain;
+            border-radius: 10px;
+            transition: transform 0.3s ease;
         }
         
-        /* Fanned Hand */
+        /* Fanned Hand with smooth animations */
         #player-hand {
             display: flex;
             justify-content: center;
@@ -85,117 +110,218 @@
         }
         
         #player-hand .card {
-            margin-left: -50px; /* Overlap cards */
-            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-            flex-shrink: 0; /* Prevent shrinking */
+            margin-left: -50px;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.5);
+            flex-shrink: 0;
+            animation: cardSlideIn 0.5s ease-out backwards;
         }
+        
+        @keyframes cardSlideIn {
+            from {
+                opacity: 0;
+                transform: translateY(100px) rotate(10deg);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) rotate(0);
+            }
+        }
+        
         #player-hand .card:first-child {
             margin-left: 0;
         }
         
         #player-hand .card:hover {
-            transform: translateY(-20px) scale(1.1);
+            transform: translateY(-30px) scale(1.15) rotate(-2deg);
             z-index: 10;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.6);
         }
         
-        /* Adjust margin of next card on hover */
         #player-hand .card:hover + .card {
             margin-left: -30px;
         }
         
         .card.disabled {
-            opacity: 0.6;
+            opacity: 0.5;
             cursor: not-allowed;
-            filter: grayscale(80%);
+            filter: grayscale(80%) brightness(0.7);
         }
         
         .card.disabled:hover {
             transform: none;
         }
         
-        /* Glowing Title Animation */
+        /* Enhanced Glowing Title Animation */
         @keyframes pulse-glow {
             0%, 100% {
-                filter: drop-shadow(0 0 8px rgba(255, 255, 0, 0.7));
-                opacity: 1;
+                filter: drop-shadow(0 0 15px rgba(255, 235, 59, 0.8)) drop-shadow(0 0 30px rgba(255, 193, 7, 0.4));
+                transform: scale(1);
             }
             50% {
-                filter: drop-shadow(0 0 15px rgba(255, 255, 0, 1));
-                opacity: 0.9;
+                filter: drop-shadow(0 0 25px rgba(255, 235, 59, 1)) drop-shadow(0 0 50px rgba(255, 193, 7, 0.6));
+                transform: scale(1.02);
             }
         }
         
         .title-glow {
-            animation: pulse-glow 3s infinite ease-in-out;
+            animation: pulse-glow 2.5s infinite ease-in-out;
+            text-shadow: 0 0 20px rgba(255, 235, 59, 0.5);
         }
         
         /* Animated Turn Indicator */
         #player-list-container.reversed #player-list {
-            flex-direction: column-reverse; /* Reverse the list for animation */
+            flex-direction: column-reverse;
         }
         
         #turn-highlight {
             position: absolute;
             left: 0;
             right: 0;
-            height: 44px; /* Matches li height */
-            background-color: #f59e0b; /* Yellow-500 */
-            border-radius: 0.375rem; /* rounded-md */
+            height: 44px;
+            background-color: #f59e0b;
+            border-radius: 0.375rem;
             z-index: -1;
-            transition: all 0.5s cubic-bezier(0.68, -0.55, 0.27, 1.55); /* Overshoot animation */
+            transition: all 0.5s cubic-bezier(0.68, -0.55, 0.27, 1.55);
             box-shadow: 0 0 15px #f59e0b;
         }
         
-        /* ✅ NEW: "YOUR TURN" INDICATOR */
+        /* Enhanced Turn Indicator */
         @keyframes pulse-glow-turn {
             0%, 100% {
                 transform: translateX(-50%) scale(1);
-                box-shadow: 0 0 20px 5px #fde047; /* yellow-300 */
+                box-shadow: 0 0 25px 8px #fde047, 0 0 50px 15px rgba(253, 224, 71, 0.3);
             }
             50% {
-                transform: translateX(-50%) scale(1.05);
-                box-shadow: 0 0 30px 10px #fde047;
+                transform: translateX(-50%) scale(1.08);
+                box-shadow: 0 0 35px 12px #fde047, 0 0 70px 20px rgba(253, 224, 71, 0.5);
             }
         }
 
         #turn-indicator {
             position: absolute;
-            top: 20px; /* Position at the top */
+            top: 20px;
             left: 50%;
             transform: translateX(-50%);
-            background-color: #f59e0b; /* yellow-500 */
-            color: #1F2937; /* gray-800 */
+            background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+            color: #1F2937;
             font-size: 1.5rem;
             font-weight: bold;
-            padding: 10px 20px;
+            padding: 12px 30px;
             border-radius: 9999px;
             z-index: 800;
             animation: pulse-glow-turn 1.5s infinite ease-in-out;
-            pointer-events: none; /* So it doesn't block clicks */
+            pointer-events: none;
+            letter-spacing: 1px;
+            text-transform: uppercase;
         }
 
-
-        /* Message Box Styling */
+        /* Enhanced Message Box */
         .message-box {
             position: fixed;
             top: 50%;
             left: 50%;
-            transform: translate(-50%, -50%);
-            background-color: white;
+            transform: translate(-50%, -50%) scale(0.8);
+            background: linear-gradient(135deg, #ffffff 0%, #f3f4f6 100%);
             color: #1F2937;
-            padding: 24px;
-            border-radius: 8px;
-            box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+            padding: 32px 40px;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.4);
             z-index: 1000;
             text-align: center;
-            font-size: 1.25rem;
+            font-size: 1.5rem;
+            font-weight: 600;
+            animation: messagePopIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+            border: 3px solid #f59e0b;
         }
         
-        /* Color Picker Modal */
+        @keyframes messagePopIn {
+            to {
+                transform: translate(-50%, -50%) scale(1);
+            }
+        }
+        
+        /* Enhanced Color Picker Modal */
         #color-modal {
             z-index: 900;
+            animation: fadeIn 0.3s ease-out;
         }
-
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        #color-modal > div {
+            animation: scaleIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        
+        @keyframes scaleIn {
+            from {
+                transform: scale(0.8);
+                opacity: 0;
+            }
+            to {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+        
+        #color-modal button {
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        }
+        
+        #color-modal button:hover {
+            transform: scale(1.2) rotate(5deg);
+            box-shadow: 0 8px 30px rgba(0,0,0,0.5);
+        }
+        
+        #color-modal button:active {
+            transform: scale(1.1);
+        }
+        
+        /* Color choice indicator */
+        #color-choice-indicator {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 850;
+            text-align: center;
+            pointer-events: none;
+        }
+        
+        #color-choice-indicator .color-circle {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            margin: 0 auto 20px;
+            box-shadow: 0 0 40px 15px currentColor;
+            animation: colorPulse 1.5s infinite ease-in-out;
+            border: 5px solid white;
+        }
+        
+        @keyframes colorPulse {
+            0%, 100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+            50% {
+                transform: scale(1.1);
+                opacity: 0.9;
+            }
+        }
+        
+        #color-choice-indicator .message {
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 15px 30px;
+            border-radius: 12px;
+            font-size: 1.3rem;
+            font-weight: bold;
+            display: inline-block;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.5);
+        }
     </style>
 </head>
 <body class="text-white font-sans">
@@ -203,12 +329,10 @@
     <!-- LOBBY SCREEN -->
     <div id="lobby-screen" class="flex">
         <div class="w-full max-w-md text-center mx-auto relative z-10">
-            <!-- Added title-glow class -->
             <h1 class="text-6xl font-extrabold mb-8 text-white title-glow">
                 Online UNO
             </h1>
             
-            <!-- Player Name Input -->
             <div class="mb-4">
                 <input type="text" id="player-name-input" placeholder="Enter Your Name" class="w-full p-4 rounded-lg text-black text-center text-lg" maxlength="20">
             </div>
@@ -228,14 +352,13 @@
             </div>
             <div id="lobby-info" class="mt-8 text-lg font-semibold"></div>
 
-            <!-- Player List --><div id="lobby-players-container" class="hidden mt-6 w-full">
+            <div id="lobby-players-container" class="hidden mt-6 w-full">
                 <h3 class="text-xl font-semibold mb-2">Players in Lobby:</h3>
                 <ul id="lobby-player-list" class="list-none bg-black bg-opacity-20 rounded-lg p-4 text-left min-h-[50px]">
-                    <!-- Player list will be populated by renderUI -->
                 </ul>
             </div>
 
-            <!-- Start Game Button --><div class="mt-6 w-full">
+            <div class="mt-6 w-full">
                 <button id="start-game-btn" class="hidden w-full bg-yellow-500 hover:bg-yellow-600 text-gray-900 font-bold py-4 px-6 rounded-lg text-xl transition duration-200 transform hover:scale-105 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed">
                     Start Game
                 </button>
@@ -243,10 +366,9 @@
         </div>
     </div>
 
-    <!-- GAME "PLAYGROUND" SCREEN -->
+    <!-- GAME SCREEN -->
     <div id="game-screen" class="hidden flex">
         
-        <!-- ✅ NEW: "YOUR TURN" INDICATOR -->
         <div id="turn-indicator" class="hidden">
             It's Your Turn!
         </div>
@@ -255,38 +377,32 @@
         <div class="w-full pt-4">
             <h2 class="text-center text-xl font-bold mb-2">Opponents' Hands</h2>
             <div id="opponent-hands" class="flex justify-center flex-wrap gap-4 p-4 min-h-[140px]">
-                <!-- Opponent hands will be rendered here -->
             </div>
         </div>
 
         <!-- Game Board Area -->
         <div class="flex-grow flex items-center justify-around w-full max-w-6xl mx-auto px-4">
             
-            <!-- Player List & Info with Turn Highlight -->
+            <!-- Player List -->
             <div id="player-list-container" class="w-1/3 max-w-xs bg-black bg-opacity-30 p-4 rounded-lg shadow-lg">
                 <h3 class="text-center text-lg font-bold mb-3">Player Order</h3>
                 <div class="relative">
                     <div id="turn-highlight"></div>
                     <ol id="player-list" class="flex flex-col space-y-2">
-                        <!-- Player list items will be rendered here -->
                     </ol>
                 </div>
             </div>
 
             <!-- Deck and Discard -->
             <div class="flex items-center justify-center space-x-8">
-                <!-- Draw Pile -->
                 <div>
                     <div id="draw-pile" class="card">
-                        <!-- Card back image will be loaded here -->
                     </div>
                     <p class="text-center mt-2 font-semibold">Draw Pile</p>
                 </div>
                 
-                <!-- Discard Pile -->
                 <div>
                     <div id="discard-pile" class="card">
-                        <!-- Top card of discard pile will be rendered here -->
                     </div>
                     <p class="text-center mt-2 font-semibold">Discard Pile</p>
                 </div>
@@ -300,15 +416,13 @@
 
         </div>
 
-        <!-- Player Hand Area (fanned) -->
+        <!-- Player Hand Area -->
         <div class="w-full">
             <h2 class="text-center text-xl font-bold mt-2">Your Hand</h2>
             <div id="player-hand" class="flex justify-center flex-wrap gap-2 p-4 min-h-[140px]">
-                <!-- Player's cards will be rendered here -->
             </div>
         </div>
         
-        <!-- Leave Game Button (moved) -->
         <button id="leave-game-btn" class="absolute bottom-4 left-4 bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-lg text-sm">
             Leave Game
         </button>
@@ -330,10 +444,14 @@
 
     <!-- Message Box Container -->
     <div id="message-container"></div>
-
+    
+    <!-- Color Choice Indicator -->
+    <div id="color-choice-indicator" class="hidden">
+        <div class="color-circle"></div>
+        <div class="message"></div>
+    </div>
 
     <script type="module">
-        // --- Firebase Imports ---
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { 
             getAuth, 
@@ -351,7 +469,7 @@
             updateDoc,
         } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // --- DOM Elements ---
+        // DOM Elements
         const lobbyScreen = document.getElementById('lobby-screen');
         const gameScreen = document.getElementById('game-screen');
         const createGameBtn = document.getElementById('create-game-btn');
@@ -373,15 +491,13 @@
         const drawCountText = document.getElementById('draw-count-text');
         const playerListContainer = document.getElementById('player-list-container');
         const turnHighlightEl = document.getElementById('turn-highlight');
-        
-        // Player Name Input
         const playerNameInput = document.getElementById('player-name-input');
-        
-        // ✅ NEW: Turn Indicator
         const turnIndicator = document.getElementById('turn-indicator');
+        const colorChoiceIndicator = document.getElementById('color-choice-indicator');
+        const colorCircle = colorChoiceIndicator.querySelector('.color-circle');
+        const colorMessage = colorChoiceIndicator.querySelector('.message');
 
-
-        // --- Firebase Config ---
+        // Firebase Config
         const firebaseConfig = {
           apiKey: "AIzaSyDIPxkUrfyMSzdddaBHHQ7hrhTMbTlOvao",
           authDomain: "uno-game-3e82a.firebaseapp.com",
@@ -392,19 +508,19 @@
           measurementId: "G-MBZTN7G8MC"
         };
         
-        // --- Global State ---
+        // Global State
         let app, auth, db;
         let currentUserId = null;
         let currentGameId = null;
         let unsubscribeFromGame = null;
         let localGameData = {}; 
 
-        // --- Card Constants ---
+        // Card Constants
         const COLORS = ['Red', 'Yellow', 'Green', 'Blue'];
         const VALUES = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'Skip', 'Reverse', 'Draw Two'];
         const WILD_VALUES = ['Wild', 'Wild Draw Four'];
         
-        // --- Main Initialization ---
+        // Main Initialization
         async function init() {
             console.log("Initializing Multiplayer App...");
             try {
@@ -423,13 +539,10 @@
                     }
                 });
 
-                // Attach button listeners ONCE
                 createGameBtn.onclick = createGame;
                 joinGameBtn.onclick = joinGame;
                 startGameBtn.onclick = startGame;
                 leaveGameBtn.onclick = returnToLobby;
-                
-                // Attach game action listeners
                 drawPileEl.onclick = handleDrawCard;
                 colorModal.onclick = (e) => {
                     if (e.target.dataset.color) {
@@ -437,7 +550,6 @@
                     }
                 };
                 
-                // Start in the lobby state
                 renderUI(null);
 
             } catch (error) {
@@ -446,7 +558,6 @@
             }
         }
         
-        // --- On-screen error/message function ---
         function showMessage(text, duration = 4000) {
             messageContainer.innerHTML = ''; 
             const msgBox = document.createElement('div');
@@ -456,18 +567,13 @@
             setTimeout(() => { msgBox.remove(); }, duration);
         }
 
-        // --- Database Helper ---
         function getGameCollectionRef() {
             return collection(db, "unoGames");
         }
         
-        /**
-         * ✅ THE ONE MASTER UI FUNCTION
-         */
         function renderUI(gameData) {
             localGameData = gameData; 
 
-            // Case 1: No game / In lobby
             if (!gameData) {
                 console.log("Rendering UI: Lobby (No Game)");
                 lobbyScreen.classList.remove('hidden');
@@ -480,7 +586,6 @@
                 return;
             }
             
-            // Case 2: In a "waiting" lobby
             if (gameData.status === 'waiting') {
                 console.log("Rendering UI: Lobby (Waiting)");
                 lobbyScreen.classList.remove('hidden');
@@ -492,7 +597,6 @@
                 lobbyPlayersContainer.classList.remove('hidden');
                 lobbyPlayerList.innerHTML = ''; 
                 
-                // Use playerNames map
                 gameData.players.forEach((playerId, index) => {
                     const li = document.createElement('li');
                     const name = gameData.playerNames[playerId] || `Player ${index + 1}`;
@@ -518,7 +622,6 @@
                 }
             }
             
-            // Case 3: Game is "active"
             else if (gameData.status === 'active') {
                 console.log("Rendering UI: Game Screen (Active)");
                 lobbyScreen.classList.add('hidden');
@@ -526,13 +629,18 @@
                 
                 const isMyTurn = gameData.currentPlayerUid === currentUserId;
                 const topCard = gameData.discardPile[gameData.discardPile.length - 1];
+                const currentPlayerName = gameData.playerNames[gameData.currentPlayerUid] || "A player";
                 
-                // ✅ NEW: Show/Hide "Your Turn" indicator
+                // Show turn indicator
                 if (isMyTurn) {
+                    turnIndicator.textContent = "It's Your Turn!";
                     turnIndicator.classList.remove('hidden');
                 } else {
-                    turnIndicator.classList.add('hidden');
+                    turnIndicator.textContent = `${currentPlayerName}'s Turn`;
+                    turnIndicator.classList.remove('hidden');
                 }
+                
+                colorChoiceIndicator.classList.add('hidden');
 
                 // Render your hand
                 playerHandEl.innerHTML = '';
@@ -547,37 +655,32 @@
                     playerHandEl.appendChild(cardEl);
                 });
 
-                // Render opponent hands (with face-down cards)
+                // Render opponent hands
                 opponentHandsEl.innerHTML = '';
                 playerListEl.innerHTML = ''; 
                 const currentPlayerIndex = gameData.players.indexOf(gameData.currentPlayerUid);
 
                 gameData.players.forEach((playerId, index) => {
-                    // Add to player list
                     const li = document.createElement('li');
                     li.className = "p-3 rounded-md text-gray-200 font-semibold transition-all duration-300";
-                    // Use playerNames
                     const name = gameData.playerNames[playerId] || `Player ${index + 1}`;
                     let text = name;
                     if (playerId === currentUserId) text += " (You)";
                     if (index === currentPlayerIndex) {
-                        li.classList.add("text-gray-900"); // Dark text for highlight
+                        li.classList.add("text-gray-900");
                     }
                     li.textContent = text;
                     playerListEl.appendChild(li);
 
-                    // Render opponent hands
                     if (playerId !== currentUserId) {
                         const opponentCardCount = gameData.playerHands[playerId]?.length || 0;
                         const opponentHandContainer = document.createElement('div');
                         opponentHandContainer.className = "text-center";
-                        // Use playerNames
                         opponentHandContainer.innerHTML = `<p class="font-semibold">${name} (${opponentCardCount} cards)</p>`;
                         
                         const cardsContainer = document.createElement('div');
-                        cardsContainer.className = "flex justify-center -space-x-10 mt-1"; // Negative margin to stack
+                        cardsContainer.className = "flex justify-center -space-x-10 mt-1";
                         for (let i = 0; i < opponentCardCount; i++) {
-                            // Only show a few cards to represent hand
                             if(i > 7) break; 
                             cardsContainer.appendChild(createCardElement(null, true));
                         }
@@ -586,8 +689,7 @@
                     }
                 });
                 
-                // Animate highlight
-                turnHighlightEl.style.transform = `translateY(${currentPlayerIndex * 44}px)`; // 44px is item height
+                turnHighlightEl.style.transform = `translateY(${currentPlayerIndex * 44}px)`;
                 if (gameData.turnDirection === 1) {
                     playerListContainer.classList.remove('reversed');
                 } else {
@@ -598,23 +700,20 @@
                 discardPileEl.innerHTML = '';
                 if (topCard) {
                     const topCardEl = createCardElement(topCard);
-                    // If wild, show chosen color
                     if (topCard.color === 'Wild' && gameData.chosenColor) {
                         topCardEl.style.boxShadow = `0 0 20px 8px ${gameData.chosenColor.toLowerCase()}`;
                     }
                     discardPileEl.appendChild(topCardEl);
                 }
                 
-                // Render Draw Pile
-                drawPileEl.innerHTML = ''; // Clear text
-                drawPileEl.appendChild(createCardElement(null, true)); // Show card back
+                drawPileEl.innerHTML = '';
+                drawPileEl.appendChild(createCardElement(null, true));
                 if (isMyTurn) {
                     drawPileEl.classList.remove('disabled');
                 } else {
                     drawPileEl.classList.add('disabled');
                 }
                 
-                // Render Draw Count Indicator
                 if (gameData.pendingDrawCount > 0) {
                     drawCountText.textContent = gameData.pendingDrawCount;
                     drawCountIndicator.classList.remove('hidden');
@@ -622,7 +721,94 @@
                     drawCountIndicator.classList.add('hidden');
                 }
             }
-            // Game is "finished"
+            
+            else if (gameData.status === 'awaiting_color') {
+                console.log("Rendering UI: Awaiting Color Choice");
+                lobbyScreen.classList.add('hidden');
+                gameScreen.classList.remove('hidden');
+                
+                const choosingPlayerName = gameData.playerNames[gameData.currentPlayerUid] || "A player";
+                
+                // Show indicator to all players
+                turnIndicator.textContent = `${choosingPlayerName} is Choosing a Color...`;
+                turnIndicator.classList.remove('hidden');
+                
+                colorCircle.style.backgroundColor = '#999';
+                colorMessage.textContent = `${choosingPlayerName} is choosing a color...`;
+                colorChoiceIndicator.classList.remove('hidden');
+                
+                const isMyTurn = gameData.currentPlayerUid === currentUserId;
+                const topCard = gameData.discardPile[gameData.discardPile.length - 1];
+
+                // Render your hand
+                playerHandEl.innerHTML = '';
+                const myHand = gameData.playerHands[currentUserId] || [];
+                myHand.forEach((card, index) => {
+                    const cardEl = createCardElement(card);
+                    cardEl.classList.add('disabled');
+                    playerHandEl.appendChild(cardEl);
+                });
+
+                // Render opponent hands
+                opponentHandsEl.innerHTML = '';
+                playerListEl.innerHTML = '';
+                const currentPlayerIndex = gameData.players.indexOf(gameData.currentPlayerUid);
+
+                gameData.players.forEach((playerId, index) => {
+                    const li = document.createElement('li');
+                    li.className = "p-3 rounded-md text-gray-200 font-semibold transition-all duration-300";
+                    const name = gameData.playerNames[playerId] || `Player ${index + 1}`;
+                    let text = name;
+                    if (playerId === currentUserId) text += " (You)";
+                    if (index === currentPlayerIndex) {
+                        li.classList.add("text-gray-900");
+                    }
+                    li.textContent = text;
+                    playerListEl.appendChild(li);
+
+                    if (playerId !== currentUserId) {
+                        const opponentCardCount = gameData.playerHands[playerId]?.length || 0;
+                        const opponentHandContainer = document.createElement('div');
+                        opponentHandContainer.className = "text-center";
+                        opponentHandContainer.innerHTML = `<p class="font-semibold">${name} (${opponentCardCount} cards)</p>`;
+                        
+                        const cardsContainer = document.createElement('div');
+                        cardsContainer.className = "flex justify-center -space-x-10 mt-1";
+                        for (let i = 0; i < opponentCardCount; i++) {
+                            if(i > 7) break; 
+                            cardsContainer.appendChild(createCardElement(null, true));
+                        }
+                        opponentHandContainer.appendChild(cardsContainer);
+                        opponentHandsEl.appendChild(opponentHandContainer);
+                    }
+                });
+                
+                turnHighlightEl.style.transform = `translateY(${currentPlayerIndex * 44}px)`;
+                if (gameData.turnDirection === 1) {
+                    playerListContainer.classList.remove('reversed');
+                } else {
+                    playerListContainer.classList.add('reversed');
+                }
+
+                // Render discard pile
+                discardPileEl.innerHTML = '';
+                if (topCard) {
+                    const topCardEl = createCardElement(topCard);
+                    discardPileEl.appendChild(topCardEl);
+                }
+                
+                drawPileEl.innerHTML = '';
+                drawPileEl.appendChild(createCardElement(null, true));
+                drawPileEl.classList.add('disabled');
+                
+                if (gameData.pendingDrawCount > 0) {
+                    drawCountText.textContent = gameData.pendingDrawCount;
+                    drawCountIndicator.classList.remove('hidden');
+                } else {
+                    drawCountIndicator.classList.add('hidden');
+                }
+            }
+            
             else if (gameData.status === 'finished') {
                 console.log("Rendering UI: Game Finished");
                 lobbyScreen.classList.add('hidden'); 
@@ -633,27 +819,20 @@
                 
                 showMessage(winnerText);
                 
-                // After 5 seconds, go back to lobby
                 setTimeout(returnToLobby, 5000);
             }
         }
         
-        // --- ✅ FIXED: Card Image URL Helper ---
         function getCardImageUrl(card, isFaceDown = false) {
-            // ✅ NEW: This is the local path.
-            // Assumes you have a folder named 'cards' in your project.
             const IMAGE_BASE_PATH = "cards/";
 
             if (isFaceDown) {
-                // This is the card back image you provided
                 return `${IMAGE_BASE_PATH}card_back.png`;
             }
             
-            // ✅ FIX: Capitalize first letter of color
             let color = card.color.charAt(0).toUpperCase() + card.color.slice(1);
-            let value = card.value; // Value is already capitalized
+            let value = card.value;
 
-            // ✅ FIX: Naming scheme from your 'image_185feb.png' screenshot
             if (color === 'Wild') {
                 if (value === 'Wild') return `${IMAGE_BASE_PATH}Wild_Card_Change_Colour.png`; 
                 if (value === 'Wild Draw Four') return `${IMAGE_BASE_PATH}Wild_Card_Draw_4.png`;
@@ -663,9 +842,8 @@
             if (value === 'Reverse') value = 'Reverse';
             if (value === 'Skip') value = 'Skip'; 
 
-            // Handle numbers
             if (!isNaN(value)) {
-                value = value; // e.g., '0', '1', '2'
+                value = value;
             }
 
             return `${IMAGE_BASE_PATH}${color}_${value}.png`;
@@ -679,7 +857,6 @@
             img.src = getCardImageUrl(card, isFaceDown);
             img.alt = isFaceDown ? "Card Back" : `${card.color} ${card.value}`;
             
-            // Add error handling for broken images
             img.onerror = () => {
                 cardEl.innerHTML = `${card ? card.color : ''}<br>${card ? card.value : 'Back'}`;
                 cardEl.style.backgroundColor = 'gray';
@@ -690,10 +867,6 @@
             return cardEl;
         }
 
-
-        /**
-         * ✅ THE ONE RELIABLE LISTENER
-         */
         async function attachGameListener(gameId) {
             currentGameId = gameId;
             const gameRef = doc(getGameCollectionRef(), gameId);
@@ -715,7 +888,6 @@
                 const gameData = doc.data();
                 console.log("onSnapshot received data. Status:", gameData.status);
                 
-                // Pass ALL data to the master UI function
                 renderUI(gameData);
             }, 
             (error) => { 
@@ -724,11 +896,7 @@
             });
         }
 
-
-        // --- Button Functions ---
-
         async function createGame() {
-            // ✅ NEW: Get player name
             const playerName = playerNameInput.value.trim();
             if (!playerName) {
                 showMessage("Please enter your name.");
@@ -750,7 +918,7 @@
                 status: 'waiting', 
                 players: [currentUserId],
                 hostId: currentUserId,
-                playerNames: { // ✅ NEW: Store player names
+                playerNames: {
                     [currentUserId]: playerName
                 },
                 gameLog: [`Game ${gameId} created by ${playerName}.`]
@@ -769,7 +937,6 @@
         }
 
         async function joinGame() {
-            // ✅ NEW: Get player name
             const playerName = playerNameInput.value.trim();
             if (!playerName) {
                 showMessage("Please enter your name.");
@@ -805,7 +972,6 @@
                         if (data.status !== 'waiting') throw new Error("Game just started!");
                         
                         const players = [...data.players, currentUserId];
-                        // ✅ NEW: Add new player's name
                         const playerNames = {...data.playerNames, [currentUserId]: playerName};
                         
                         transaction.update(gameRef, {
@@ -835,7 +1001,6 @@
             const gameRef = doc(getGameCollectionRef(), currentGameId);
 
             try {
-                // Get fresh data to check host status
                 const freshDoc = await getDoc(gameRef);
                 if (!freshDoc.exists()) throw new Error("Game not found.");
                 
@@ -873,15 +1038,12 @@
                         pendingDrawCount: 0,
                         gameLog: [
                             ...freshData.gameLog,
-                            // ✅ NEW: Use playerNames
                             `Host started the game. ${freshData.playerNames[players[0]]}'s turn.`,
                         ],
                     });
                 });
 
                 console.log("Start game transaction successful!");
-                // The onSnapshot listener will now see "status: active"
-                // and call renderUI to switch the screen for EVERYONE.
             
             } catch (error) {
                 console.error("Error starting game:", error);
@@ -891,42 +1053,34 @@
             }
         }
 
-        /**
-         * ✅ NEW: Handles a player leaving the game
-         */
         async function returnToLobby() {
             console.log("Returning to lobby...");
 
             const gameId = currentGameId;
             const userId = currentUserId;
 
-            // Unsubscribe first so we don't see our own update
             if (unsubscribeFromGame) {
                 unsubscribeFromGame();
                 unsubscribeFromGame = null;
             }
             
-            // Reset local state immediately
             currentGameId = null;
             localGameData = {}; 
             renderUI(null);
 
-            // Now, update the database to tell others we left
             if (gameId && userId) {
                 const gameRef = doc(getGameCollectionRef(), gameId);
                 try {
                     await runTransaction(db, async (transaction) => {
                         const gameDoc = await transaction.get(gameRef);
-                        if (!gameDoc.exists()) return; // Game is already gone
+                        if (!gameDoc.exists()) return;
                         
                         const gameData = gameDoc.data();
                         
-                        // Don't modify a finished game
                         if (gameData.status === 'finished') return; 
 
                         const playerName = gameData.playerNames[userId] || "A player";
                         
-                        // Remove player from lists
                         const newPlayers = gameData.players.filter(uid => uid !== userId);
                         const newPlayerNames = { ...gameData.playerNames };
                         delete newPlayerNames[userId];
@@ -934,7 +1088,6 @@
                         let newGameLog = [...gameData.gameLog, `${playerName} has left the game.`];
                         
                         if (newPlayers.length === 0) {
-                            // Last player left, just update log
                             transaction.update(gameRef, {
                                 players: [],
                                 playerNames: {},
@@ -943,30 +1096,26 @@
                             return;
                         }
                         
-                        // --- Handle Turn Passing ---
                         let newCurrentPlayerUid = gameData.currentPlayerUid;
                         let newHostId = gameData.hostId;
                         
                         if (gameData.currentPlayerUid === userId) {
-                            // It was the leaver's turn, pass it.
                             const oldPlayerIndex = gameData.players.indexOf(userId);
                             const nextPlayerOldIndex = (oldPlayerIndex + gameData.turnDirection + gameData.players.length) % gameData.players.length;
                             newCurrentPlayerUid = gameData.players[nextPlayerOldIndex];
                             
-                            if (newCurrentPlayerUid === userId) { // If leaver was last player
+                            if (newCurrentPlayerUid === userId) {
                                 newCurrentPlayerUid = newPlayers[0];
                             }
                             
                             newGameLog.push(`${newPlayerNames[newCurrentPlayerUid] || 'Next player'}'s turn.`);
                         }
                         
-                        // --- Handle Host Migration ---
                         if (gameData.hostId === userId) {
-                            newHostId = newPlayers[0]; // New host is the next player in line
+                            newHostId = newPlayers[0];
                             newGameLog.push(`${newPlayerNames[newHostId]} is the new host.`);
                         }
                         
-                        // --- Check for Win by Forfeit ---
                         if (newPlayers.length === 1 && gameData.status === 'active') {
                             const winnerUid = newPlayers[0];
                             const winnerName = newPlayerNames[winnerUid];
@@ -980,7 +1129,6 @@
                                 gameLog: newGameLog
                             });
                         } else {
-                            // Just update the game state
                             transaction.update(gameRef, {
                                 players: newPlayers,
                                 playerNames: newPlayerNames,
@@ -992,12 +1140,10 @@
                     });
                 } catch (error) {
                     console.error("Error leaving game:", error);
-                    // Don't show an error, just leave quietly
                 }
             }
         }
 
-        // --- Card Utility Functions ---
         function createAndShuffleDeck() {
             let newDeck = [];
             for (const color of COLORS) {
@@ -1023,26 +1169,19 @@
             return newDeck;
         }
 
-        // --- Game Logic Functions ---
-
-        /**
-         * Checks if a card is valid to play
-         */
         function isValidPlay(card, topCard, gameData) {
             const pendingDraw = gameData.pendingDrawCount > 0;
             const activeColor = gameData.chosenColor || topCard.color;
 
             if (pendingDraw) {
-                // Stack rules
                 if (card.value === 'Wild Draw Four') return true;
                 if (card.value === 'Draw Two') {
                     if (topCard.value === 'Wild Draw Four' && card.color === activeColor) return true;
                     if (topCard.value === 'Draw Two' && card.color === activeColor) return true;
                 }
-                return false; // All other cards are invalid
+                return false;
             }
 
-            // Standard play rules
             if (card.color === 'Wild') return true;
             if (card.color === activeColor) return true;
             if (card.value === topCard.value) return true; 
@@ -1050,11 +1189,8 @@
             return false;
         }
 
-        /**
-         * Handles the player clicking on a card in their hand
-         */
         async function handlePlayCard(cardIndex) {
-            if (localGameData.currentPlayerUid !== currentUserId) return; // Not my turn
+            if (localGameData.currentPlayerUid !== currentUserId) return;
             
             const card = localGameData.playerHands[currentUserId][cardIndex];
             const gameRef = doc(getGameCollectionRef(), currentGameId);
@@ -1074,20 +1210,16 @@
                         throw new Error("Invalid card play!");
                     }
                     
-                    // --- Card is valid, update game state ---
-                    // playSfx('play'); // Sound removed
                     let playerHand = [...gameData.playerHands[currentUserId]];
                     const playedCard = playerHand.splice(cardIndex, 1)[0];
                     
                     let discardPile = [...gameData.discardPile, playedCard];
                     let playerHands = {...gameData.playerHands, [currentUserId]: playerHand};
-                    // ✅ NEW: Use playerNames
                     let gameLog = [...gameData.gameLog, `${gameData.playerNames[currentUserId]} played a ${playedCard.color} ${playedCard.value}`];
                     let status = gameData.status;
                     let winner = null;
                     let pendingDrawCount = gameData.pendingDrawCount;
                     
-                    // --- Check for win ---
                     if (playerHand.length === 0) {
                         status = 'finished';
                         winner = currentUserId;
@@ -1101,10 +1233,9 @@
                             discardPile: discardPile,
                             pendingDrawCount: 0
                         });
-                        return; // Game over
+                        return;
                     }
 
-                    // --- Handle card effects ---
                     const numPlayers = gameData.players.length;
                     const currentPlayerIndex = gameData.players.indexOf(currentUserId);
                     let turnDirection = gameData.turnDirection;
@@ -1130,32 +1261,28 @@
                         case 'Wild Draw Four':
                             pendingDrawCount += 4;
                             gameLog.push(`Stack is now at +${pendingDrawCount}!`);
-                            break; // Color chosen later
+                            break;
                         case 'Wild':
-                            break; // Color chosen later
+                            break;
                         default:
                             chosenColor = playedCard.color;
                             break;
                     }
 
-                    // --- Handle Wild cards (stop to ask for color) ---
                     if (playedCard.color === 'Wild') {
                         transaction.update(gameRef, {
                             playerHands: playerHands,
                             discardPile: discardPile,
                             gameLog: gameLog,
-                            status: 'awaiting_color', // Special status
+                            status: 'awaiting_color',
                             pendingDrawCount: pendingDrawCount
                         });
-                        // Show modal (client-side)
                         colorModal.classList.remove('hidden');
-                        return; // Exit transaction
+                        return;
                     }
 
-                    // --- Calculate next player ---
                     nextPlayerIndex = (currentPlayerIndex + turnDirection + numPlayers) % numPlayers;
                     if (skipTurn) {
-                        // ✅ NEW: Use playerNames
                         gameLog.push(`${gameData.playerNames[gameData.players[nextPlayerIndex]]} was skipped!`);
                         nextPlayerIndex = (nextPlayerIndex + turnDirection + numPlayers) % numPlayers;
                     }
@@ -1180,13 +1307,9 @@
             }
         }
 
-        /**
-         * Handles the player clicking the draw pile
-         */
         async function handleDrawCard() {
-            if (!localGameData.currentPlayerUid || localGameData.currentPlayerUid !== currentUserId) return; // Not my turn
+            if (!localGameData.currentPlayerUid || localGameData.currentPlayerUid !== currentUserId) return;
 
-            // playSfx('draw'); // Sound removed
             const gameRef = doc(getGameCollectionRef(), currentGameId);
 
             try {
@@ -1210,18 +1333,16 @@
                     const nextPlayerUid = gameData.players[nextPlayerIndex];
                     
                     let numToDraw = 1;
-                    const playerName = gameData.playerNames[currentUserId]; // ✅ NEW
+                    const playerName = gameData.playerNames[currentUserId];
 
                     if (pendingDrawCount > 0) {
-                        // Player must draw the stack
                         numToDraw = pendingDrawCount;
-                        pendingDrawCount = 0; // Clear the stack
+                        pendingDrawCount = 0;
                         gameLog.push(`${playerName} must draw ${numToDraw} cards!`);
                     } else {
                         gameLog.push(`${playerName} drew a card.`);
                     }
 
-                    // --- Check if deck needs reshuffle ---
                     if (deck.length < numToDraw) {
                         if (discardPile.length <= 1) throw new Error("No cards left to draw!");
                         
@@ -1234,9 +1355,7 @@
                         gameLog.push("Deck ran out and was reshuffled!");
                     }
                     
-                    // --- Draw cards ---
                     if (deck.length < numToDraw) {
-                        // Still not enough cards
                         numToDraw = deck.length;
                         gameLog.push(`Not enough cards! Drawing ${numToDraw}.`);
                     }
@@ -1244,16 +1363,15 @@
                     const drawnCards = deck.splice(0, numToDraw);
                     playerHand.push(...drawnCards);
                     
-                    // --- Pass turn ---
                     gameLog.push(`${gameData.playerNames[nextPlayerUid]}'s turn.`);
                     
                     transaction.update(gameRef, {
                         deck: deck,
                         discardPile: discardPile,
                         playerHands: {...gameData.playerHands, [currentUserId]: playerHand},
-                        currentPlayerUid: nextPlayerUid, // Pass turn
+                        currentPlayerUid: nextPlayerUid,
                         gameLog: gameLog,
-                        pendingDrawCount: pendingDrawCount // Will be 0
+                        pendingDrawCount: pendingDrawCount
                     });
                 });
             } catch (error) {
@@ -1262,9 +1380,6 @@
             }
         }
         
-        /**
-         * Handles the player choosing a color from the modal
-         */
         async function handleSelectColor(color) {
             colorModal.classList.add('hidden');
             if (localGameData.status !== 'awaiting_color' || localGameData.currentPlayerUid !== currentUserId) {
@@ -1274,7 +1389,9 @@
             const gameRef = doc(getGameCollectionRef(), currentGameId);
 
             try {
-                // We don't need a full transaction, just a simple update
+                colorCircle.style.backgroundColor = color.toLowerCase();
+                colorMessage.textContent = `${localGameData.playerNames[currentUserId]} chose ${color}!`;
+                
                 const currentPlayerIndex = localGameData.players.indexOf(currentUserId);
                 const numPlayers = localGameData.players.length;
                 const turnDirection = localGameData.turnDirection;
@@ -1283,7 +1400,6 @@
                 const finalNextPlayerUid = localGameData.players[nextPlayerIndex];
 
                 let gameLog = [...localGameData.gameLog];
-                // ✅ NEW: Use playerNames
                 gameLog.push(`${localGameData.playerNames[currentUserId]} chose ${color}.`);
                 gameLog.push(`${localGameData.playerNames[finalNextPlayerUid]}'s turn.`);
 
@@ -1291,8 +1407,12 @@
                     chosenColor: color,
                     currentPlayerUid: finalNextPlayerUid,
                     gameLog: gameLog,
-                    status: 'active' // Set status back to active
+                    status: 'active'
                 });
+                
+                setTimeout(() => {
+                    colorChoiceIndicator.classList.add('hidden');
+                }, 2000);
 
             } catch (error) {
                 console.error("Error selecting color:", error);
@@ -1300,9 +1420,8 @@
             }
         }
 
-
         console.log("Simple Lobby Initialized.");
-        init(); // Start the app
+        init();
 
     </script>
 </body>
