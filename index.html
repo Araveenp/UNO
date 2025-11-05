@@ -20,7 +20,7 @@
             background-image: radial-gradient(circle, #2d3748 0%, #1a202c 100%);
             height: 100vh;
             width: 100vw;
-            display: flex;
+            /* ✅ FIX: Removed display:flex. It's now in the HTML class. */
             flex-direction: column;
             align-items: center;
             justify-content: center;
@@ -35,7 +35,7 @@
             background: radial-gradient(circle, #0a8f44 0%, #043a1b 100%);
             height: 100vh;
             width: 100vw;
-            display: flex; 
+            /* ✅ FIX: Removed display:flex. It's now in the HTML class. */
             flex-direction: column;
             align-items: center;
             justify-content: space-between; /* Space for hands and board */
@@ -123,8 +123,8 @@
 </head>
 <body class="text-white font-sans">
 
-    <!-- LOBBY SCREEN -->
-    <div id="lobby-screen">
+    <!-- ✅ FIX: Added `flex` class. This is the fix. -->
+    <div id="lobby-screen" class="flex">
         <div class="w-full max-w-md text-center mx-auto relative z-10">
             <h1 class="text-6xl font-extrabold mb-8 text-white" style="filter: drop-shadow(0 0 10px rgba(255, 255, 0, 0.5));">
                 Online UNO
@@ -160,8 +160,8 @@
         </div>
     </div>
 
-    <!-- GAME "PLAYGROUND" SCREEN -->
-    <div id="game-screen" class="hidden">
+    <!-- ✅ FIX: Added `flex` class. This is the fix. -->
+    <div id="game-screen" class="hidden flex">
         
         <!-- Opponent Area -->
         <div class="w-full pt-4">
@@ -349,11 +349,7 @@
         
         // --- On-screen error/message function ---
         function showMessage(text, duration = 4000) {
-            // Re-instating the simple pop-up alert for errors
-            // This is *not* a good UI, but it *will* stop the game
-            // and tell us exactly what is wrong.
-            alert(text); 
-            
+            // This is the non-blocking on-screen message box
             messageContainer.innerHTML = ''; 
             const msgBox = document.createElement('div');
             msgBox.className = 'message-box';
@@ -429,6 +425,7 @@
                 lobbyScreen.classList.add('hidden');
                 gameScreen.classList.remove('hidden');
                 
+                // --- SIMPLIFIED GAME RENDER ---
                 const isMyTurn = gameData.currentPlayerUid === currentUserId;
                 const topCard = gameData.discardPile[gameData.discardPile.length - 1];
                 
@@ -694,6 +691,7 @@
                 console.log("Start game transaction successful!");
                 // The onSnapshot listener will now see "status: active"
                 // and call renderUI to switch the screen for EVERYONE.
+                // No manual switch is needed, this is the simple, robust way.
             
             } catch (error) {
                 console.error("Error starting game:", error);
