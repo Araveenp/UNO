@@ -123,7 +123,7 @@
 </head>
 <body class="text-white font-sans">
 
-    <!-- LOBBY SCREEN (No changes) -->
+    <!-- LOBBY SCREEN -->
     <div id="lobby-screen">
         <div class="w-full max-w-md text-center mx-auto relative z-10">
             <h1 class="text-6xl font-extrabold mb-8 text-white" style="filter: drop-shadow(0 0 10px rgba(255, 255, 0, 0.5));">
@@ -160,7 +160,7 @@
         </div>
     </div>
 
-    <!-- GAME "PLAYGROUND" SCREEN (Updated HTML) -->
+    <!-- GAME "PLAYGROUND" SCREEN -->
     <div id="game-screen" class="hidden">
         
         <!-- Opponent Area -->
@@ -933,12 +933,10 @@
                     const nextPlayerUid = gameData.players[nextPlayerIndex];
                     
                     let numToDraw = 1;
-                    let skipTurn = false;
 
                     if (pendingDrawCount > 0) {
                         // Player must draw the stack
                         numToDraw = pendingDrawCount;
-                        skipTurn = true; // Drawing the stack skips your turn
                         pendingDrawCount = 0; // Clear the stack
                         gameLog.push(`Player ${currentPlayerIndex + 1} must draw ${numToDraw} cards!`);
                     } else {
@@ -1030,4 +1028,3 @@
     </script>
 </body>
 </html>
-
