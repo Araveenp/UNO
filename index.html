@@ -4,22 +4,22 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Online UNO Game</title>
-    <!-- Load Tailwind CSS for styling --><script src="https://cdn.tailwindcss.com"></script>
-    <!-- Removed Tone.js (sound) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.7.77/Tone.js"></script>
     <style>
         body {
-            font-family: 'Arial', sans-serif;
+            font-family: 'Segoe UI', 'Roboto', sans-serif;
             margin: 0;
             padding: 0;
             color: #fff;
-            overflow: hidden; /* Prevent scrolling */
+            overflow: hidden;
         }
 
-        /* Lobby Background */
+        /* Lobby Background - Vibrant UNO themed */
         #lobby-screen {
-            background-image: url('https://i.imgur.com/W29F1rM.png');
-            background-size: cover;
-            background-position: center;
+            background: linear-gradient(135deg, #e74c3c 0%, #f39c12 25%, #2ecc71 50%, #3498db 75%, #9b59b6 100%);
+            background-size: 400% 400%;
+            animation: gradientShift 15s ease infinite;
             height: 100vh;
             width: 100vw;
             flex-direction: column;
@@ -30,129 +30,344 @@
             padding: 20px;
         }
         
-        /* Dark overlay for lobby text readability */
+        @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        
+        /* Animated circles in background */
         #lobby-screen::before {
             content: '';
             position: absolute;
             top: 0; left: 0; right: 0; bottom: 0;
-            background-color: rgba(0,0,0,0.6);
+            background-image: 
+                radial-gradient(circle at 20% 30%, rgba(255,255,255,0.1) 0%, transparent 50%),
+                radial-gradient(circle at 80% 70%, rgba(255,255,255,0.1) 0%, transparent 50%),
+                radial-gradient(circle at 50% 50%, rgba(0,0,0,0.3) 0%, transparent 70%);
+            animation: floatCircles 20s ease-in-out infinite;
             z-index: -1;
         }
+        
+        @keyframes floatCircles {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            50% { transform: translate(20px, 20px) scale(1.1); }
+        }
+        
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .animate-fadeIn {
+            animation: fadeIn 0.6s ease-out backwards;
+        }
 
-        /* Game Screen Background (felt table) */
+        /* Game Screen Background - Realistic felt table */
         #game-screen {
-            background-color: #054b23;
-            background: radial-gradient(circle, #0a8f44 0%, #043a1b 100%);
+            background: 
+                repeating-linear-gradient(
+                    90deg,
+                    #0a5d2c 0px,
+                    #0a5d2c 2px,
+                    #0b6430 2px,
+                    #0b6430 4px
+                ),
+                radial-gradient(ellipse at center, #0f7d3d 0%, #063a1a 100%);
             height: 100vh;
             width: 100vw;
             flex-direction: column;
             align-items: center;
-            justify-content: space-between; /* Space for hands and board */
+            justify-content: space-between;
             padding: 10px;
+            position: relative;
+        }
+        
+        /* Wood table edge effect */
+        #game-screen::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border: 20px solid;
+            border-image: linear-gradient(135deg, #8B4513 0%, #A0522D 50%, #8B4513 100%) 1;
+            pointer-events: none;
+            box-shadow: inset 0 0 50px rgba(0,0,0,0.5);
         }
 
-        /* Card Styling */
+        /* Card Styling - Enhanced 3D effect */
         .card {
             width: 90px;
             height: 135px;
-            border-radius: 8px;
-            background-color: transparent; /* Transparent background */
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+            border-radius: 12px;
+            border: 3px solid rgba(255,255,255,0.8);
+            background-color: #1a202c;
+            box-shadow: 
+                0 8px 16px rgba(0, 0, 0, 0.4),
+                0 2px 4px rgba(0, 0, 0, 0.3),
+                inset 0 1px 0 rgba(255,255,255,0.2);
             position: relative;
             cursor: pointer;
-            transition: all 0.2s ease;
-            overflow: hidden; /* Hide img overflow */
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            overflow: hidden;
+            transform-style: preserve-3d;
         }
         
         .card img {
             width: 100%;
             height: 100%;
-            object-fit: contain; /* Use contain to keep aspect ratio */
-            border-radius: 6px;
+            object-fit: fill;
+            border-radius: 9px;
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
         }
         
-        /* ✅ REVERTED to simple grid layout */
+        /* Fanned Hand with smooth animations */
         #player-hand {
             display: flex;
             justify-content: center;
-            align-items: center;
-            flex-wrap: wrap; /* Allow cards to wrap */
-            gap: 8px; /* Space between cards */
-            padding: 16px;
+            align-items: flex-end;
+            padding-bottom: 24px;
             min-height: 170px;
+            flex-wrap: nowrap;
+            overflow-x: auto;
             max-width: 90vw;
+            perspective: 1000px;
+        }
+        
+        #player-hand .card {
+            margin-left: -50px;
+            box-shadow: 
+                0 10px 25px rgba(0,0,0,0.5),
+                0 5px 10px rgba(0,0,0,0.3);
+            flex-shrink: 0;
+            animation: cardDeal 0.5s ease-out backwards;
+        }
+        
+        @keyframes cardDeal {
+            from {
+                transform: translateY(-100vh) rotate(180deg);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0) rotate(0deg);
+                opacity: 1;
+            }
+        }
+        
+        #player-hand .card:first-child {
+            margin-left: 0;
         }
         
         #player-hand .card:hover {
-            transform: translateY(-10px) scale(1.05); /* Simple hover */
+            transform: translateY(-30px) translateZ(50px) scale(1.15) rotateZ(0deg);
             z-index: 10;
+            box-shadow: 
+                0 20px 40px rgba(0,0,0,0.6),
+                0 0 20px rgba(255,215,0,0.4);
+        }
+        
+        #player-hand .card:hover + .card {
+            margin-left: -30px;
         }
         
         .card.disabled {
-            opacity: 0.6;
+            opacity: 0.5;
             cursor: not-allowed;
-            filter: grayscale(80%);
+            filter: grayscale(80%) brightness(0.7);
         }
         
         .card.disabled:hover {
             transform: none;
         }
         
-        /* Glowing Title Animation */
+        /* Enhanced Glowing Title Animation */
         @keyframes pulse-glow {
             0%, 100% {
-                filter: drop-shadow(0 0 8px rgba(255, 255, 0, 0.7));
-                opacity: 1;
+                text-shadow: 
+                    0 0 20px rgba(255, 255, 255, 0.8),
+                    0 0 40px rgba(255, 215, 0, 0.6),
+                    0 0 60px rgba(255, 215, 0, 0.4);
+                transform: scale(1);
             }
             50% {
-                filter: drop-shadow(0 0 15px rgba(255, 255, 0, 1));
-                opacity: 0.9;
+                text-shadow: 
+                    0 0 30px rgba(255, 255, 255, 1),
+                    0 0 60px rgba(255, 215, 0, 0.8),
+                    0 0 90px rgba(255, 215, 0, 0.6);
+                transform: scale(1.05);
             }
         }
         
         .title-glow {
-            animation: pulse-glow 3s infinite ease-in-out;
+            animation: pulse-glow 2s infinite ease-in-out;
+            font-weight: 900;
+            letter-spacing: 8px;
+            background: linear-gradient(45deg, #ff0000, #ffff00, #00ff00, #0000ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            filter: drop-shadow(0 0 10px white);
         }
         
-        /* Animated Turn Indicator */
+        /* Animated Turn Indicator with smooth transitions */
         #player-list-container.reversed #player-list {
-            flex-direction: column-reverse; /* Reverse the list for animation */
+            flex-direction: column-reverse;
         }
         
         #turn-highlight {
             position: absolute;
             left: 0;
             right: 0;
-            height: 44px; /* Matches li height */
-            background-color: #f59e0b; /* Yellow-500 */
-            border-radius: 0.375rem; /* rounded-md */
+            height: 44px;
+            background: linear-gradient(90deg, #f59e0b, #fbbf24, #f59e0b);
+            background-size: 200% 100%;
+            animation: shimmer 2s infinite;
+            border-radius: 0.375rem;
             z-index: -1;
-            transition: all 0.5s cubic-bezier(0.68, -0.55, 0.27, 1.55); /* Overshoot animation */
-            box-shadow: 0 0 15px #f59e0b;
+            transition: transform 0.6s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+            box-shadow: 
+                0 0 20px #f59e0b,
+                0 0 40px rgba(245, 158, 11, 0.5);
+        }
+        
+        @keyframes shimmer {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
         }
 
-
-        /* Message Box Styling */
+        /* Message Box with entrance animation */
         .message-box {
             position: fixed;
             top: 50%;
             left: 50%;
-            transform: translate(-50%, -50%);
-            background-color: white;
-            color: #1F2937;
-            padding: 24px;
-            border-radius: 8px;
-            box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+            transform: translate(-50%, -50%) scale(0);
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 32px 48px;
+            border-radius: 16px;
+            box-shadow: 
+                0 20px 60px rgba(0,0,0,0.5),
+                0 0 0 4px rgba(255,255,255,0.2);
             z-index: 1000;
             text-align: center;
-            font-size: 1.25rem;
+            font-size: 1.5rem;
+            font-weight: bold;
+            animation: popIn 0.5s cubic-bezier(0.68, -0.55, 0.27, 1.55) forwards;
         }
         
-        /* Color Picker Modal */
+        @keyframes popIn {
+            to {
+                transform: translate(-50%, -50%) scale(1);
+            }
+        }
+        
+        /* Color Picker Modal with backdrop blur */
         #color-modal {
             z-index: 900;
+            backdrop-filter: blur(10px);
         }
-
+        
+        #color-modal > div {
+            animation: slideUp 0.4s ease-out;
+        }
+        
+        @keyframes slideUp {
+            from {
+                transform: translateY(100px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+        
+        #color-modal button {
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+        
+        #color-modal button:hover {
+            transform: scale(1.2) translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.4);
+        }
+        
+        /* Enhanced button styles */
+        button {
+            position: relative;
+            overflow: hidden;
+        }
+        
+        button::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.3);
+            transform: translate(-50%, -50%);
+            transition: width 0.6s, height 0.6s;
+        }
+        
+        button:active::before {
+            width: 300px;
+            height: 300px;
+        }
+        
+        /* Discard pile card flip animation */
+        #discard-pile .card {
+            animation: cardFlip 0.6s ease-out;
+        }
+        
+        @keyframes cardFlip {
+            0% {
+                transform: rotateY(90deg) scale(0.5);
+                opacity: 0;
+            }
+            50% {
+                transform: rotateY(45deg) scale(0.8);
+            }
+            100% {
+                transform: rotateY(0deg) scale(1);
+                opacity: 1;
+            }
+        }
+        
+        /* Draw pile hover effect */
+        #draw-pile:not(.disabled) {
+            cursor: pointer;
+        }
+        
+        #draw-pile:not(.disabled):hover {
+            transform: translateY(-10px) scale(1.1);
+            box-shadow: 
+                0 15px 30px rgba(0,0,0,0.5),
+                0 0 20px rgba(66, 153, 225, 0.5);
+        }
+        
+        /* Draw count indicator pulse */
+        #draw-count-indicator {
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% {
+                transform: scale(1);
+                box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.7);
+            }
+            50% {
+                transform: scale(1.05);
+                box-shadow: 0 0 0 10px rgba(220, 38, 38, 0);
+            }
+        }
     </style>
 </head>
 <body class="text-white font-sans">
@@ -160,34 +375,34 @@
     <!-- LOBBY SCREEN -->
     <div id="lobby-screen" class="flex">
         <div class="w-full max-w-md text-center mx-auto relative z-10">
-            <!-- Added title-glow class -->
             <h1 class="text-6xl font-extrabold mb-8 text-white title-glow">
                 Online UNO
             </h1>
             
             <div class="space-y-6">
-                <button id="create-game-btn" class="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-4 px-6 rounded-lg text-xl transition duration-200 transform hover:scale-105 shadow-lg">
-                    Create New Game
+                <button id="create-game-btn" class="w-full bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-bold py-4 px-6 rounded-xl text-xl transition duration-300 transform hover:scale-105 shadow-2xl animate-fadeIn" style="animation-delay: 0.1s;">
+                    🎮 Create New Game
                 </button>
-                <div class="relative flex items-center">
-                    <hr class="w-full border-gray-400">
-                    <span class="absolute left-1/2 -translate-x-1/2 bg-gray-700 px-4 text-gray-200" style="background-color: rgba(0,0,0,0.7);">OR</span>
+                <div class="relative flex items-center animate-fadeIn" style="animation-delay: 0.2s;">
+                    <hr class="w-full border-gray-300">
+                    <span class="absolute left-1/2 -translate-x-1/2 bg-white bg-opacity-20 backdrop-blur-sm px-6 py-1 rounded-full text-white font-semibold">OR</span>
                 </div>
-                <input type="text" id="game-id-input" placeholder="Enter Game ID" class="w-full p-4 rounded-lg text-black text-center text-lg">
-                <button id="join-game-btn" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-4 px-6 rounded-lg text-xl transition duration-200 transform hover:scale-105 shadow-lg">
-                    Join Game
+                <input type="text" id="game-id-input" placeholder="Enter Game ID" class="w-full p-4 rounded-xl text-black text-center text-lg font-semibold shadow-xl border-4 border-white focus:border-yellow-400 focus:outline-none transition-all animate-fadeIn" style="animation-delay: 0.3s;">
+                <button id="join-game-btn" class="w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-bold py-4 px-6 rounded-xl text-xl transition duration-300 transform hover:scale-105 shadow-2xl animate-fadeIn" style="animation-delay: 0.4s;">
+                    🚀 Join Game
                 </button>
             </div>
-            <div id="lobby-info" class="mt-8 text-lg font-semibold"></div>
+            <div id="lobby-info" class="mt-8 text-lg font-semibold bg-white bg-opacity-10 backdrop-blur-sm px-6 py-3 rounded-full"></div>
 
-            <!-- Player List --><div id="lobby-players-container" class="hidden mt-6 w-full">
+            <!-- Player List -->
+            <div id="lobby-players-container" class="hidden mt-6 w-full">
                 <h3 class="text-xl font-semibold mb-2">Players in Lobby:</h3>
                 <ul id="lobby-player-list" class="list-none bg-black bg-opacity-20 rounded-lg p-4 text-left min-h-[50px]">
-                    <!-- Player list will be populated by renderUI -->
                 </ul>
             </div>
 
-            <!-- Start Game Button --><div class="mt-6 w-full">
+            <!-- Start Game Button -->
+            <div class="mt-6 w-full">
                 <button id="start-game-btn" class="hidden w-full bg-yellow-500 hover:bg-yellow-600 text-gray-900 font-bold py-4 px-6 rounded-lg text-xl transition duration-200 transform hover:scale-105 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed">
                     Start Game
                 </button>
@@ -195,27 +410,25 @@
         </div>
     </div>
 
-    <!-- GAME "PLAYGROUND" SCREEN -->
+    <!-- GAME SCREEN -->
     <div id="game-screen" class="hidden flex">
         
         <!-- Opponent Area -->
         <div class="w-full pt-4">
             <h2 class="text-center text-xl font-bold mb-2">Opponents' Hands</h2>
             <div id="opponent-hands" class="flex justify-center flex-wrap gap-4 p-4 min-h-[140px]">
-                <!-- Opponent hands will be rendered here -->
             </div>
         </div>
 
         <!-- Game Board Area -->
         <div class="flex-grow flex items-center justify-around w-full max-w-6xl mx-auto px-4">
             
-            <!-- Player List & Info with Turn Highlight -->
+            <!-- Player List & Info -->
             <div id="player-list-container" class="w-1/3 max-w-xs bg-black bg-opacity-30 p-4 rounded-lg shadow-lg">
                 <h3 class="text-center text-lg font-bold mb-3">Player Order</h3>
                 <div class="relative">
                     <div id="turn-highlight"></div>
                     <ol id="player-list" class="flex flex-col space-y-2">
-                        <!-- Player list items will be rendered here -->
                     </ol>
                 </div>
             </div>
@@ -225,7 +438,6 @@
                 <!-- Draw Pile -->
                 <div>
                     <div id="draw-pile" class="card">
-                        <!-- Card back image will be loaded here -->
                     </div>
                     <p class="text-center mt-2 font-semibold">Draw Pile</p>
                 </div>
@@ -233,7 +445,6 @@
                 <!-- Discard Pile -->
                 <div>
                     <div id="discard-pile" class="card">
-                        <!-- Top card of discard pile will be rendered here -->
                     </div>
                     <p class="text-center mt-2 font-semibold">Discard Pile</p>
                 </div>
@@ -251,11 +462,10 @@
         <div class="w-full">
             <h2 class="text-center text-xl font-bold mt-2">Your Hand</h2>
             <div id="player-hand" class="flex justify-center flex-wrap gap-2 p-4 min-h-[140px]">
-                <!-- Player's cards will be rendered here -->
             </div>
         </div>
         
-        <!-- Leave Game Button (moved) -->
+        <!-- Leave Game Button -->
         <button id="leave-game-btn" class="absolute bottom-4 left-4 bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-lg text-sm">
             Leave Game
         </button>
@@ -339,14 +549,42 @@
         let currentGameId = null;
         let unsubscribeFromGame = null;
         let localGameData = {}; 
+        let isAudioEnabled = false;
 
         // --- Card Constants ---
         const COLORS = ['Red', 'Yellow', 'Green', 'Blue'];
         const VALUES = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'Skip', 'Reverse', 'Draw Two'];
         const WILD_VALUES = ['Wild', 'Wild Draw Four'];
         
-        // ✅ NEW: Stable Image CDN from the repo you found!
-        const IMAGE_CDN_URL = "https://cdn.jsdelivr.net/gh/john-costanzo/uno-card-images@master/PNGs/small/";
+        const IMAGE_CDN_URL = "https://gveg.github.io/uno-clone/cards/";
+
+        // Sound effects
+        const noiseSynth = new Tone.NoiseSynth({
+            noise: { type: 'white' },
+            envelope: { attack: 0.001, decay: 0.1, sustain: 0 }
+        }).toDestination();
+        
+        const pluckSynth = new Tone.PluckSynth().toDestination();
+        const winSampler = new Tone.Sampler({
+            urls: { C4: "C4.mp3", E4: "E4.mp3", G4: "G4.mp3", },
+            baseUrl: "https://tonejs.github.io/audio/salamander/",
+        }).toDestination();
+
+        const sounds = {
+            play: () => { noiseSynth.triggerAttackRelease("8n", Tone.now()); },
+            draw: () => { pluckSynth.triggerAttack("C3", Tone.now()); },
+            join: () => { pluckSynth.triggerAttack("C4", Tone.now()); },
+            win: () => { winSampler.triggerAttackRelease(["C4", "E4", "G4"], "4n", Tone.now()); }
+        };
+
+        async function playSfx(soundName) {
+            if (!isAudioEnabled) {
+                await Tone.start();
+                isAudioEnabled = true;
+                console.log("Audio context started");
+            }
+            if (sounds[soundName]) sounds[soundName]();
+        }
 
         // --- Main Initialization ---
         async function init() {
@@ -367,13 +605,11 @@
                     }
                 });
 
-                // Attach button listeners ONCE
                 createGameBtn.onclick = createGame;
                 joinGameBtn.onclick = joinGame;
                 startGameBtn.onclick = startGame;
                 leaveGameBtn.onclick = returnToLobby;
                 
-                // Attach game action listeners
                 drawPileEl.onclick = handleDrawCard;
                 colorModal.onclick = (e) => {
                     if (e.target.dataset.color) {
@@ -381,7 +617,6 @@
                     }
                 };
                 
-                // Start in the lobby state
                 renderUI(null);
 
             } catch (error) {
@@ -390,7 +625,6 @@
             }
         }
         
-        // --- On-screen error/message function ---
         function showMessage(text, duration = 4000) {
             messageContainer.innerHTML = ''; 
             const msgBox = document.createElement('div');
@@ -400,18 +634,13 @@
             setTimeout(() => { msgBox.remove(); }, duration);
         }
 
-        // --- Database Helper ---
         function getGameCollectionRef() {
             return collection(db, "unoGames");
         }
         
-        /**
-         * ✅ THE ONE MASTER UI FUNCTION
-         */
         function renderUI(gameData) {
             localGameData = gameData; 
 
-            // Case 1: No game / In lobby
             if (!gameData) {
                 console.log("Rendering UI: Lobby (No Game)");
                 lobbyScreen.classList.remove('hidden');
@@ -424,7 +653,6 @@
                 return;
             }
             
-            // Case 2: In a "waiting" lobby
             if (gameData.status === 'waiting') {
                 console.log("Rendering UI: Lobby (Waiting)");
                 lobbyScreen.classList.remove('hidden');
@@ -460,7 +688,6 @@
                 }
             }
             
-            // Case 3: Game is "active"
             else if (gameData.status === 'active') {
                 console.log("Rendering UI: Game Screen (Active)");
                 lobbyScreen.classList.add('hidden');
@@ -469,7 +696,6 @@
                 const isMyTurn = gameData.currentPlayerUid === currentUserId;
                 const topCard = gameData.discardPile[gameData.discardPile.length - 1];
                 
-                // Render your hand
                 playerHandEl.innerHTML = '';
                 const myHand = gameData.playerHands[currentUserId] || [];
                 myHand.forEach((card, index) => {
@@ -482,24 +708,21 @@
                     playerHandEl.appendChild(cardEl);
                 });
 
-                // Render opponent hands (with face-down cards)
                 opponentHandsEl.innerHTML = '';
                 playerListEl.innerHTML = ''; 
                 const currentPlayerIndex = gameData.players.indexOf(gameData.currentPlayerUid);
 
                 gameData.players.forEach((playerId, index) => {
-                    // Add to player list
                     const li = document.createElement('li');
                     li.className = "p-3 rounded-md text-gray-200 font-semibold transition-all duration-300";
                     let text = `Player ${index + 1}`;
                     if (playerId === currentUserId) text += " (You)";
                     if (index === currentPlayerIndex) {
-                        li.classList.add("text-gray-900"); // Dark text for highlight
+                        li.classList.add("text-gray-900");
                     }
                     li.textContent = text;
                     playerListEl.appendChild(li);
 
-                    // Render opponent hands
                     if (playerId !== currentUserId) {
                         const opponentCardCount = gameData.playerHands[playerId]?.length || 0;
                         const opponentHandContainer = document.createElement('div');
@@ -507,9 +730,8 @@
                         opponentHandContainer.innerHTML = `<p class="font-semibold">Player ${index + 1} (${opponentCardCount} cards)</p>`;
                         
                         const cardsContainer = document.createElement('div');
-                        cardsContainer.className = "flex justify-center -space-x-10 mt-1"; // Negative margin to stack
+                        cardsContainer.className = "flex justify-center -space-x-10 mt-1";
                         for (let i = 0; i < opponentCardCount; i++) {
-                            // Only show a few cards to represent hand
                             if(i > 7) break; 
                             cardsContainer.appendChild(createCardElement(null, true));
                         }
@@ -518,37 +740,31 @@
                     }
                 });
                 
-                // Animate highlight
-                turnHighlightEl.style.transform = `translateY(${currentPlayerIndex * 44}px)`; // 44px is item height
+                turnHighlightEl.style.transform = `translateY(${currentPlayerIndex * 44}px)`;
                 if (gameData.turnDirection === 1) {
                     playerListContainer.classList.remove('reversed');
                 } else {
                     playerListContainer.classList.add('reversed');
                 }
 
-                // Render discard pile
                 discardPileEl.innerHTML = '';
                 if (topCard) {
                     const topCardEl = createCardElement(topCard);
-                    // If wild, show chosen color
                     if (topCard.color === 'Wild' && gameData.chosenColor) {
-                        // The 'wild_color_changer.png' already has all colors
-                        // but we can add a glow for the chosen one
-                        topCardEl.style.boxShadow = `0 0 20px 8px ${gameData.chosenColor.toLowerCase()}`;
+                        topCardEl.innerHTML = '';
+                        topCardEl.style.backgroundColor = gameData.chosenColor.toLowerCase();
                     }
                     discardPileEl.appendChild(topCardEl);
                 }
                 
-                // Render Draw Pile
-                drawPileEl.innerHTML = ''; // Clear text
-                drawPileEl.appendChild(createCardElement(null, true)); // Show card back
+                drawPileEl.innerHTML = '';
+                drawPileEl.appendChild(createCardElement(null, true));
                 if (isMyTurn) {
                     drawPileEl.classList.remove('disabled');
                 } else {
                     drawPileEl.classList.add('disabled');
                 }
                 
-                // Render Draw Count Indicator
                 if (gameData.pendingDrawCount > 0) {
                     drawCountText.textContent = gameData.pendingDrawCount;
                     drawCountIndicator.classList.remove('hidden');
@@ -556,7 +772,6 @@
                     drawCountIndicator.classList.add('hidden');
                 }
             }
-            // Game is "finished"
             else if (gameData.status === 'finished') {
                 console.log("Rendering UI: Game Finished");
                 lobbyScreen.classList.add('hidden'); 
@@ -565,38 +780,29 @@
                 const winnerIndex = gameData.players.indexOf(gameData.winner);
                 const winnerText = gameData.winner === currentUserId ? "You Win!" : `Player ${winnerIndex + 1} Wins!`;
                 
-                // playSfx('win'); // Sound removed
+                playSfx('win');
                 showMessage(winnerText);
                 
-                // After 5 seconds, go back to lobby
                 setTimeout(returnToLobby, 5000);
             }
         }
         
-        // --- ✅ FIXED: Card Image URL Helper ---
         function getCardImageUrl(card, isFaceDown = false) {
             if (isFaceDown) {
-                // This is the card back image you provided
                 return `${IMAGE_CDN_URL}card_back.png`;
             }
 
             let color = card.color.toLowerCase();
             let value = card.value.toLowerCase();
             
-            // New repo naming scheme
             if (color === 'wild') {
-                if (value === 'wild') return `${IMAGE_CDN_URL}wild_color_picker.png`; // ✅ FIX
-                if (value === 'wild draw four') return `${IMAGE_CDN_URL}wild_plus_4.png`;
+                if (value === 'wild') return `${IMAGE_CDN_URL}wild_wild.png`;
+                if (value === 'wild draw four') return `${IMAGE_CDN_URL}wild_draw_4.png`;
             }
 
-            if (value === 'draw two') value = 'plus_2';
+            if (value === 'draw two') value = 'draw_2';
             if (value === 'reverse') value = 'reverse';
-            if (value === 'skip') value = 'picker'; // ✅ FIX
-
-            // Handle numbers
-            if (!isNaN(value)) {
-                value = value; // e.g., '0', '1', '2'
-            }
+            if (value === 'skip') value = 'skip';
 
             return `${IMAGE_CDN_URL}${color}_${value}.png`;
         }
@@ -613,10 +819,6 @@
             return cardEl;
         }
 
-
-        /**
-         * ✅ THE ONE RELIABLE LISTENER
-         */
         async function attachGameListener(gameId) {
             currentGameId = gameId;
             const gameRef = doc(getGameCollectionRef(), gameId);
@@ -638,7 +840,6 @@
                 const gameData = doc.data();
                 console.log("onSnapshot received data. Status:", gameData.status);
                 
-                // Pass ALL data to the master UI function
                 renderUI(gameData);
             }, 
             (error) => { 
@@ -647,11 +848,8 @@
             });
         }
 
-
-        // --- Button Functions ---
-
         async function createGame() {
-            // playSfx('join'); // Sound removed
+            playSfx('join');
             if (!currentUserId) {
                 showMessage("Connecting... try again in a moment.");
                 return;
@@ -684,7 +882,7 @@
         }
 
         async function joinGame() {
-            // playSfx('join'); // Sound removed
+            playSfx('join');
             const gameId = gameIdInput.value.trim().toUpperCase();
             if (!currentUserId) {
                 showMessage("Connecting... try again.");
@@ -738,7 +936,6 @@
             const gameRef = doc(getGameCollectionRef(), currentGameId);
 
             try {
-                // Get fresh data to check host status
                 const freshDoc = await getDoc(gameRef);
                 if (!freshDoc.exists()) throw new Error("Game not found.");
                 
@@ -782,8 +979,6 @@
                 });
 
                 console.log("Start game transaction successful!");
-                // The onSnapshot listener will now see "status: active"
-                // and call renderUI to switch the screen for EVERYONE.
             
             } catch (error) {
                 console.error("Error starting game:", error);
@@ -800,11 +995,10 @@
                 unsubscribeFromGame = null;
             }
             currentGameId = null;
-            localGameData = {}; // Clear local cache
+            localGameData = {};
             renderUI(null);
         }
 
-        // --- Card Utility Functions ---
         function createAndShuffleDeck() {
             let newDeck = [];
             for (const color of COLORS) {
@@ -830,26 +1024,19 @@
             return newDeck;
         }
 
-        // --- Game Logic Functions ---
-
-        /**
-         * Checks if a card is valid to play
-         */
         function isValidPlay(card, topCard, gameData) {
             const pendingDraw = gameData.pendingDrawCount > 0;
             const activeColor = gameData.chosenColor || topCard.color;
 
             if (pendingDraw) {
-                // Stack rules
                 if (card.value === 'Wild Draw Four') return true;
                 if (card.value === 'Draw Two') {
                     if (topCard.value === 'Wild Draw Four' && card.color === activeColor) return true;
                     if (topCard.value === 'Draw Two' && card.color === activeColor) return true;
                 }
-                return false; // All other cards are invalid
+                return false;
             }
 
-            // Standard play rules
             if (card.color === 'Wild') return true;
             if (card.color === activeColor) return true;
             if (card.value === topCard.value) return true; 
@@ -857,11 +1044,8 @@
             return false;
         }
 
-        /**
-         * Handles the player clicking on a card in their hand
-         */
         async function handlePlayCard(cardIndex) {
-            if (localGameData.currentPlayerUid !== currentUserId) return; // Not my turn
+            if (localGameData.currentPlayerUid !== currentUserId) return;
             
             const card = localGameData.playerHands[currentUserId][cardIndex];
             const gameRef = doc(getGameCollectionRef(), currentGameId);
@@ -881,8 +1065,7 @@
                         throw new Error("Invalid card play!");
                     }
                     
-                    // --- Card is valid, update game state ---
-                    // playSfx('play'); // Sound removed
+                    playSfx('play');
                     let playerHand = [...gameData.playerHands[currentUserId]];
                     const playedCard = playerHand.splice(cardIndex, 1)[0];
                     
@@ -893,7 +1076,6 @@
                     let winner = null;
                     let pendingDrawCount = gameData.pendingDrawCount;
                     
-                    // --- Check for win ---
                     if (playerHand.length === 0) {
                         status = 'finished';
                         winner = currentUserId;
@@ -907,10 +1089,9 @@
                             discardPile: discardPile,
                             pendingDrawCount: 0
                         });
-                        return; // Game over
+                        return;
                     }
 
-                    // --- Handle card effects ---
                     const numPlayers = gameData.players.length;
                     const currentPlayerIndex = gameData.players.indexOf(currentUserId);
                     let turnDirection = gameData.turnDirection;
@@ -936,29 +1117,26 @@
                         case 'Wild Draw Four':
                             pendingDrawCount += 4;
                             gameLog.push(`Stack is now at +${pendingDrawCount}!`);
-                            break; // Color chosen later
+                            break;
                         case 'Wild':
-                            break; // Color chosen later
+                            break;
                         default:
                             chosenColor = playedCard.color;
                             break;
                     }
 
-                    // --- Handle Wild cards (stop to ask for color) ---
                     if (playedCard.color === 'Wild') {
                         transaction.update(gameRef, {
                             playerHands: playerHands,
                             discardPile: discardPile,
                             gameLog: gameLog,
-                            status: 'awaiting_color', // Special status
+                            status: 'awaiting_color',
                             pendingDrawCount: pendingDrawCount
                         });
-                        // Show modal (client-side)
                         colorModal.classList.remove('hidden');
-                        return; // Exit transaction
+                        return;
                     }
 
-                    // --- Calculate next player ---
                     nextPlayerIndex = (currentPlayerIndex + turnDirection + numPlayers) % numPlayers;
                     if (skipTurn) {
                         gameLog.push(`Player ${nextPlayerIndex + 1} was skipped!`);
@@ -985,13 +1163,9 @@
             }
         }
 
-        /**
-         * Handles the player clicking the draw pile
-         */
         async function handleDrawCard() {
-            if (!localGameData.currentPlayerUid || localGameData.currentPlayerUid !== currentUserId) return; // Not my turn
+            if (!localGameData.currentPlayerUid || localGameData.currentPlayerUid !== currentUserId) return;
 
-            // playSfx('draw'); // Sound removed
             const gameRef = doc(getGameCollectionRef(), currentGameId);
 
             try {
@@ -1002,6 +1176,7 @@
                     const gameData = gameDoc.data();
                     if(gameData.currentPlayerUid !== currentUserId) throw new Error("Not your turn!");
 
+                    playSfx('draw');
                     let deck = [...gameData.deck];
                     let discardPile = [...gameData.discardPile];
                     let playerHand = [...gameData.playerHands[currentUserId]];
@@ -1017,15 +1192,13 @@
                     let numToDraw = 1;
 
                     if (pendingDrawCount > 0) {
-                        // Player must draw the stack
                         numToDraw = pendingDrawCount;
-                        pendingDrawCount = 0; // Clear the stack
+                        pendingDrawCount = 0;
                         gameLog.push(`Player ${currentPlayerIndex + 1} must draw ${numToDraw} cards!`);
                     } else {
                         gameLog.push(`Player ${currentPlayerIndex + 1} drew a card.`);
                     }
 
-                    // --- Check if deck needs reshuffle ---
                     if (deck.length < numToDraw) {
                         if (discardPile.length <= 1) throw new Error("No cards left to draw!");
                         
@@ -1038,9 +1211,7 @@
                         gameLog.push("Deck ran out and was reshuffled!");
                     }
                     
-                    // --- Draw cards ---
                     if (deck.length < numToDraw) {
-                        // Still not enough cards
                         numToDraw = deck.length;
                         gameLog.push(`Not enough cards! Drawing ${numToDraw}.`);
                     }
@@ -1048,16 +1219,15 @@
                     const drawnCards = deck.splice(0, numToDraw);
                     playerHand.push(...drawnCards);
                     
-                    // --- Pass turn ---
                     gameLog.push(`Player ${nextPlayerIndex + 1}'s turn.`);
                     
                     transaction.update(gameRef, {
                         deck: deck,
                         discardPile: discardPile,
                         playerHands: {...gameData.playerHands, [currentUserId]: playerHand},
-                        currentPlayerUid: nextPlayerUid, // Pass turn
+                        currentPlayerUid: nextPlayerUid,
                         gameLog: gameLog,
-                        pendingDrawCount: pendingDrawCount // Will be 0
+                        pendingDrawCount: pendingDrawCount
                     });
                 });
             } catch (error) {
@@ -1066,9 +1236,6 @@
             }
         }
         
-        /**
-         * Handles the player choosing a color from the modal
-         */
         async function handleSelectColor(color) {
             colorModal.classList.add('hidden');
             if (localGameData.status !== 'awaiting_color' || localGameData.currentPlayerUid !== currentUserId) {
@@ -1078,7 +1245,6 @@
             const gameRef = doc(getGameCollectionRef(), currentGameId);
 
             try {
-                // We don't need a full transaction, just a simple update
                 const currentPlayerIndex = localGameData.players.indexOf(currentUserId);
                 const numPlayers = localGameData.players.length;
                 const turnDirection = localGameData.turnDirection;
@@ -1094,7 +1260,7 @@
                     chosenColor: color,
                     currentPlayerUid: finalNextPlayerUid,
                     gameLog: gameLog,
-                    status: 'active' // Set status back to active
+                    status: 'active'
                 });
 
             } catch (error) {
@@ -1103,9 +1269,8 @@
             }
         }
 
-
         console.log("Simple Lobby Initialized.");
-        init(); // Start the app
+        init();
 
     </script>
 </body>
